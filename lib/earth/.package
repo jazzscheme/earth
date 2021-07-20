@@ -1,0 +1,52 @@
+(package earth
+  
+  (title "Earth")
+  (description "Gaea examples")
+  (authors "Guillaume Cartier")
+  (stage release)
+  (root "src")
+  (products (earth.triangle (alias triangle)
+                            (title "Triangle")
+                            (run earth.triangle)
+                            (build (earth.triangle executable: "01Triangle"))
+                            (update earth.triangle))
+            (earth (dependencies jazz
+                                 jazz.action
+                                 jazz.application
+                                 jazz.cairo
+                                 jazz.clipboard
+                                 jazz.component
+                                 jazz.crash
+                                 jazz.debuggee
+                                 jazz.document
+                                 jazz.event
+                                 jazz.feedback
+                                 jazz.graphic
+                                 jazz.handler
+                                 jazz.history
+                                 jazz.layout
+                                 jazz.locale
+                                 jazz.markup
+                                 jazz.math
+                                 jazz.menu
+                                 jazz.opengl
+                                 jazz.preferences
+                                 jazz.print
+                                 jazz.profile
+                                 jazz.resource
+                                 jazz.runtime
+                                 jazz.screen
+                                 jazz.settings
+                                 jazz.snapshot
+                                 jazz.syntax
+                                 jazz.template
+                                 jazz.text
+                                 jazz.tree
+                                 jazz.ui
+                                 jazz.version
+                                 jazz.view
+                                 jazz.window
+                                 jazz.workspace
+                                 gaea
+                                 earth.triangle)))
+  (project ".project"))

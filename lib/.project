@@ -13,4 +13,5 @@
 
 
 (form
-  (<Project> name: lib)))
+  (<Project> name: lib
+    (<*>               tag-reference: {File :context "earth" ".project"}))))
