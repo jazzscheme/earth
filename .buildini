@@ -1,0 +1,9 @@
+;;;==============
+;;;  JazzScheme
+;;;==============
+;;;
+;;;; Local buildini
+;;;
+
+
+(jazz:repositories "gaea;.")

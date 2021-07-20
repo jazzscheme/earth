@@ -1,0 +1,100 @@
+#!/bin/sh
+
+REL="$(dirname "$0")"
+
+GAEA="$REL/gaea"
+JAZZ="$REL/jazz"
+JAZ="$JAZZ/jaz"
+
+REPOCOLOR='\033[1;34m'
+NOCOLOR='\033[0m'
+
+case $OSTYPE in
+    "msys" )
+        alias git='"/c/Program Files/Git/bin/git"'
+	     ;;
+esac
+
+feedback() {
+    case $OSTYPE in
+        "msys" )
+            echo -e "$1"
+	         ;;
+
+        * )
+            echo "$1"
+            ;;
+    esac
+}
+
+display_info () {
+    feedback "${REPOCOLOR}$1${NOCOLOR}"
+    if [ -d "$2" ]; then
+	     cd "$2" &&
+	     git log -1
+    fi
+}
+
+display_all_info () {
+    (display_info "Earth" "$REL")
+    echo
+    (display_info "Gaea" "$GAEA")
+    echo
+    (display_info "Jazz" "$JAZZ")
+}
+
+display_status () {
+    feedback "${REPOCOLOR}$1${NOCOLOR}"
+    if [ -d "$2" ]; then
+	     cd "$2" &&
+	     git status
+    fi
+}
+
+display_all_status () {
+    (display_status "Earth" "$REL")
+    echo
+    (display_status "Gaea" "$GAEA")
+    echo
+    (display_status "Jazz" "$JAZZ")
+}
+
+pull () {
+    feedback "${REPOCOLOR}$1${NOCOLOR}"
+    if [ -d "$2" ]; then
+	     cd "$2" &&
+	     git pull
+    fi
+}
+
+pull_all () {
+    (pull "Earth" "$REL")
+    echo
+    (pull "Gaea" "$GAEA")
+    echo
+    (pull "Jazz" "$JAZZ")
+}
+
+case "$1" in
+	"info" )
+		display_all_info
+		exit
+		;;
+
+	"status" )
+		display_all_status
+		exit
+		;;
+
+	"pull" )
+		pull_all
+		exit
+		;;
+esac
+
+if [ ! -f "$JAZ" ]; then
+	echo "Unable to find jazz/jaz"
+	exit 1
+fi
+
+exec "$JAZ" "$@"
