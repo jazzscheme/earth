@@ -2,7 +2,7 @@
 ;;;  GaeaScheme
 ;;;==============
 ;;;
-;;;; Earth Mesh
+;;;; Earth Array
 ;;;
 ;;;  The contents of this file are subject to the Mozilla Public License Version
 ;;;  1.1 (the "License"); you may not use this file except in compliance with
@@ -35,7 +35,7 @@
 ;;;  See www.jazzscheme.org for details.
 
 
-(module earth.mesh jazz
+(module earth.array jazz
 
 
 (import (jazz.application)
@@ -52,10 +52,8 @@
         (gaea.buffer)
         (gaea.generate)
         (gaea.geometry)
-        (gaea.mesh)
-        (gaea.mesher)
         (gaea.program)
-        (gaea.program.mesh)
+        (gaea.program.color)
         (gaea.shader)
         (gaea.shaders))
 
@@ -65,19 +63,19 @@
 ;;;
 
 
-(class Mesh-Window extends OpenGL-Window
+(class Array-Window extends OpenGL-Window
   
   
   (form
-    (<install> caption-base: "Mesh"))
+    (<install> caption-base: "Array"))
   
   
   ;; Programs
-  (slot mesh-program        initialize #f getter generate)
+  (slot color-program       initialize #f getter generate)
   
-  ;; Meshes
-  (slot blue-mesh           initialize #f getter generate)
-  (slot red-mesh            initialize #f getter generate)
+  ;; Arrays
+  (slot blue-array          initialize #f getter generate)
+  (slot red-array           initialize #f getter generate)
   
   ;; Matrices
   (slot projection-matrix   initialize (make-matrix) getter generate)
@@ -94,12 +92,12 @@
   
   (method override (setup-opengl self)
     (setup-programs self)
-    (initialize-meshes self)
+    (initialize-arrays self)
     (start-render self))
   
   
   (method (setup-programs self)
-    (set! mesh-program (require-program 'mesh)))
+    (set! color-program (require-program 'color)))
   
   
   (method (start-render self)
@@ -124,52 +122,34 @@
   
   
   ;;;
-  ;;;; Meshes
+  ;;;; Arrays
   ;;;
   
   
-  (method (initialize-meshes self)
-    (define (triangle-generate v1 v2 v3)
-      (let ((mesher (new Mesher 1 0))
-            (normal (vertex 0. 0. 1.))
-            (uv (f32vector 0. 0. 0. 0. 0. 0. 0. 0.))
-            (depth 0.))
-        (add-triangle mesher
-                      v1 normal 0 0 0
-                      v2 normal 0 0 0
-                      v3 normal 0 0 0
-                      uv
-                      depth)
-        (get-mesh mesher mesh-program)))
+  (method (initialize-arrays self)
+    (define (array-generate data)
+      (let ((array (new Color-Array)))
+        (allocate-vertices array)
+        (set-data (get-vertices-buffer array) data color-triangle-floats color-vertex-floats)
+        (setup-array array color-program)
+        array))
     
-    (define (triangle-generator v1 v2 v3)
-      (lambda (setup-proc triangle-proc quad-proc)
-        (setup-proc 1 0)
-        (let ((uv (f32vector 0. 0. 0. 0. 0. 0. 0. 0.))
-              (depth 0.))
-          (triangle-proc
-            v1 #f 0 0 0
-            v2 #f 0 0 0
-            v3 #f 0 0 0
-            uv
-            depth))))
-    
-    (set! red-mesh (create-red self triangle-generate))
-    (set! blue-mesh (create-blue self triangle-generator)))
+    (set! red-array (create-red self array-generate))
+    (set! blue-array (create-blue self array-generate)))
   
   
   (method (create-red self generate)
-    (let ((v1 (vertex 1.0 0.0 -5.0))
-          (v2 (vertex 3.0 0.0 -5.0))
-          (v3 (vertex 2.0 2.0 -5.0)))
-      (generate v1 v2 v3)))
+    (generate
+      #f32( 1.0 0.0 -5.0 1.0 0.0 0.0
+            3.0 0.0 -5.0 1.0 0.0 0.0
+            2.0 2.0 -5.0 1.0 0.0 0.0)))
   
   
-  (method (create-blue self generator)
-    (let ((v1 (vertex -3.0 0.0 -5.0))
-          (v2 (vertex -1.0 0.0 -5.0))
-          (v3 (vertex -2.0 2.0 -5.0)))
-      (generate-mesh mesh-program (generator v1 v2 v3))))
+  (method (create-blue self generate)
+    (generate
+      #f32( -3.0 0.0 -5.0 0.0 0.0 1.0
+            -1.0 0.0 -5.0 0.0 0.0 1.0
+            -2.0 2.0 -5.0 0.0 0.0 1.0)))
   
   
   ;;;
@@ -200,17 +180,13 @@
     (glClearColor 0.0 0.0 0.0 0.0)
     (glClear (bitwise-ior GL_COLOR_BUFFER_BIT GL_DEPTH_BUFFER_BIT))
     
-    ;; Mesh
-    (use mesh-program)
-    (bind-uniforms mesh-program projection-matrix view-matrix #f32(1.0 0.0 0.0))
-    (bind-model-matrix mesh-program (make-identity-matrix&))
-    (draw-array red-mesh)
-    (unbind-uniforms mesh-program)
-    (bind-uniforms mesh-program projection-matrix view-matrix #f32(0.0 0.0 1.0))
-    (bind-model-matrix mesh-program (make-identity-matrix&))
-    (draw-array blue-mesh)
-    (unbind-uniforms mesh-program)
-    (unuse mesh-program)))
+    ;; Color
+    (use color-program)
+    (bind-uniforms color-program projection-matrix view-matrix)
+    (draw-array red-array)
+    (draw-array blue-array)
+    (unbind-uniforms color-program)
+    (unuse color-program)))
 
 
 ;;;
@@ -218,11 +194,11 @@
 ;;;
 
 
-(class Mesh-Application extends Application
+(class Array-Application extends Application
   
   
   (method override (new-toplevel self)
-    (new-opengl-window class: Mesh-Window size: {Dimension 640 360})))
+    (new-opengl-window class: Array-Window size: {Dimension 640 360})))
 
 
 ;;;
@@ -230,9 +206,9 @@
 ;;;
 
 
-(definition (run-mesh descriptor)
-  (boot-environment (new Mesh-Application)))
+(definition (run-array descriptor)
+  (boot-environment (new Array-Application)))
 
 
-(register-product-run 'earth.mesh
-  run-mesh))
+(register-product-run 'earth.array
+  run-array))
