@@ -18,4 +18,5 @@
     (<Project-Directory>                  directory: {Directory :context "src"}
       (<Project-Directory>                directory: {Directory :context "src" "earth"}
         (<Jazz-File>       name: triangle source: {File :context "src" "earth" "triangle.jazz"})
-        (<Jazz-File>       name: mesh     source: {File :context "src" "earth" "mesh.jazz"}))))))
+        (<Jazz-File>       name: mesh     source: {File :context "src" "earth" "mesh.jazz"})
+        (<Jazz-File>       name: array    source: {File :context "src" "earth" "array.jazz"}))))))
