@@ -10,6 +10,11 @@
                             (run earth.triangle)
                             (build (earth.triangle executable: "01Triangle"))
                             (update earth.triangle))
+            (earth.mesh (alias mesh)
+                        (title "Mesh")
+                        (run earth.mesh)
+                        (build (earth.mesh executable: "02Mesh"))
+                        (update earth.mesh))
             (earth (dependencies jazz
                                  jazz.action
                                  jazz.application
@@ -48,5 +53,6 @@
                                  jazz.window
                                  jazz.workspace
                                  gaea
-                                 earth.triangle)))
+                                 earth.triangle
+                                 earth.mesh)))
   (project ".project"))

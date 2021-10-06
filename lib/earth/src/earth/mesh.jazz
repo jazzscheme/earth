@@ -1,0 +1,224 @@
+;;;==============
+;;;  GaeaScheme
+;;;==============
+;;;
+;;;; Earth Mesh
+;;;
+;;;  The contents of this file are subject to the Mozilla Public License Version
+;;;  1.1 (the "License"); you may not use this file except in compliance with
+;;;  the License. You may obtain a copy of the License at
+;;;  http://www.mozilla.org/MPL/
+;;;
+;;;  Software distributed under the License is distributed on an "AS IS" basis,
+;;;  WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+;;;  for the specific language governing rights and limitations under the
+;;;  License.
+;;;
+;;;  The Original Code is JazzScheme.
+;;;
+;;;  The Initial Developer of the Original Code is Guillaume Cartier.
+;;;  Portions created by the Initial Developer are Copyright (C) 1996-2018
+;;;  the Initial Developer. All Rights Reserved.
+;;;
+;;;  Contributor(s):
+;;;
+;;;  Alternatively, the contents of this file may be used under the terms of
+;;;  the GNU General Public License Version 2 or later (the "GPL"), in which
+;;;  case the provisions of the GPL are applicable instead of those above. If
+;;;  you wish to allow use of your version of this file only under the terms of
+;;;  the GPL, and not to allow others to use your version of this file under the
+;;;  terms of the MPL, indicate your decision by deleting the provisions above
+;;;  and replace them with the notice and other provisions required by the GPL.
+;;;  If you do not delete the provisions above, a recipient may use your version
+;;;  of this file under the terms of any one of the MPL or the GPL.
+;;;
+;;;  See www.jazzscheme.org for details.
+
+
+(module earth.mesh jazz
+
+
+(import (jazz.application)
+        (jazz.graphic)
+        (jazz.io)
+        (jazz.markup)
+        (jazz.platform)
+        (jazz.process)
+        (jazz.opengl)
+        (jazz.opengl.glew)
+        (jazz.opengl.window)
+        (jazz.screen)
+        (gaea.buffer)
+        (gaea.generate)
+        (gaea.geometry)
+        (gaea.mesh)
+        (gaea.programs)
+        (gaea.shader)
+        (gaea.shaders))
+
+
+;;;
+;;;; Window
+;;;
+
+
+(class Mesh-Window extends OpenGL-Window
+  
+  
+  (form
+    (<install> caption-base: "Mesh"))
+  
+  
+  ;; Programs
+  (slot color-program       initialize #f getter generate)
+  
+  ;; Meshes
+  (slot blue-mesh           initialize #f getter generate)
+  (slot red-mesh            initialize #f getter generate)
+  
+  ;; Matrices
+  (slot projection-matrix   initialize (make-matrix) getter generate)
+  (slot view-matrix         initialize (make-matrix) getter generate)
+  
+  ;; Render
+  (slot render-thread       initialize #f getter generate)
+  
+  
+  (method override (destroy self)
+    (stop-render self)
+    (nextmethod self))
+  
+  
+  (method override (setup-opengl self)
+    (prepare-shaders)
+    (prepare-programs)
+    (setup-programs self)
+    (initialize-meshes self)
+    (start-render self))
+  
+  
+  (method (setup-programs self)
+    (set! color-program (require-mesh-program 'color)))
+  
+  
+  (method (start-render self)
+    (let ((thread
+            (new-thread
+              (lambda ()
+                (declare (proper-tail-calls))
+                (let ((period (/ 1. 30.)))
+                  (let (loop)
+                    (render-scene self)
+                    (sleep period)
+                    (loop))))
+              'render)))
+      (set! render-thread thread)
+      (thread-start! thread)))
+  
+  
+  (method (stop-render self)
+    (when render-thread
+      (thread-terminate! render-thread)
+      (set! render-thread #f)))
+  
+  
+  ;;;
+  ;;;; Meshes
+  ;;;
+  
+  
+  (method (initialize-meshes self)
+    (define (triangle-generator v1 v2 v3)
+      (lambda (setup-proc triangle-proc quad-proc)
+        (setup-proc 1 0)
+        (let ((uv (f32vector 0. 0. 0. 0. 0. 0. 0. 0.))
+              (depth 0.))
+          (triangle-proc
+            v1 #f 0 0 0
+            v2 #f 0 0 0
+            v3 #f 0 0 0
+            uv
+            depth))))
+    
+    (set! red-mesh (create-red self triangle-generator))
+    (set! blue-mesh (create-blue self triangle-generator)))
+  
+  
+  (method (create-red self generator)
+    (let ((v1 (vertex 1.0 0.0 -5.0))
+          (v2 (vertex 3.0 0.0 -5.0))
+          (v3 (vertex 2.0 2.0 -5.0)))
+      (generate-mesh color-program (generator v1 v2 v3))))
+  
+  
+  (method (create-blue self generator)
+    (let ((v1 (vertex -3.0 0.0 -5.0))
+          (v2 (vertex -1.0 0.0 -5.0))
+          (v3 (vertex -2.0 2.0 -5.0)))
+      (generate-mesh color-program (generator v1 v2 v3))))
+  
+  
+  ;;;
+  ;;;; Resize
+  ;;;
+  
+  
+  (method override (resize-scene self width <fl> height <fl>)
+    ;; Viewport
+    (let ((scale-factor (main-screen-scale-factor)))
+      (glViewport 0 0 (* scale-factor (fxround width)) (* scale-factor (fxround height))))
+    
+    ;; Projection
+    (let ((ratio (/ width height)))
+      (make-perspective-matrix! projection-matrix 53.13 ratio 1.0 30.0))
+    
+    ;; View
+    (make-view-matrix! view-matrix (vertex 7. 2. 6.) (lookat (vertex -.513 -.110 -.852) (vertex -.056 .994 -.094) (vertex .857 -4.195e-8 -.516))))
+  
+  
+  ;;;
+  ;;;; Draw
+  ;;;
+  
+  
+  (method override (draw-scene self)
+    ;; Background
+    (glClearColor 0.0 0.0 0.0 0.0)
+    (glClear (bitwise-ior GL_COLOR_BUFFER_BIT GL_DEPTH_BUFFER_BIT))
+    
+    ;; Color
+    (use color-program)
+    (bind-uniforms color-program projection-matrix view-matrix #f32(1.0 0.0 0.0))
+    (bind-model-matrix color-program (make-identity-matrix&))
+    (draw-array red-mesh)
+    (unbind-uniforms color-program)
+    (bind-uniforms color-program projection-matrix view-matrix #f32(0.0 0.0 1.0))
+    (bind-model-matrix color-program (make-identity-matrix&))
+    (draw-array blue-mesh)
+    (unbind-uniforms color-program)
+    (unuse color-program)))
+
+
+;;;
+;;;; Application
+;;;
+
+
+(class Mesh-Application extends Application
+  
+  
+  (method override (new-toplevel self)
+    (new-opengl-window class: Mesh-Window size: {Dimension 640 360})))
+
+
+;;;
+;;;; Run
+;;;
+
+
+(definition (run-mesh descriptor)
+  (boot-environment (new Mesh-Application)))
+
+
+(register-product-run 'earth.mesh
+  run-mesh))
