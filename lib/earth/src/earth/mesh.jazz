@@ -53,7 +53,8 @@
         (gaea.geometry)
         (gaea.mesh)
         (gaea.program)
-        (gaea.programs)
+        (gaea.program.color)
+        (gaea.program.mesh)
         (gaea.shader)
         (gaea.shaders))
 
@@ -91,7 +92,6 @@
   
   
   (method override (setup-opengl self)
-    (prepare-programs)
     (setup-programs self)
     (initialize-meshes self)
     (start-render self))
