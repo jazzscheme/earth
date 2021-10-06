@@ -49,6 +49,7 @@
         (jazz.opengl.window)
         (jazz.screen)
         (gaea.geometry)
+        (gaea.program)
         (gaea.shader))
 
 
@@ -99,7 +100,7 @@ void main()
 //#))
 
 
-(class Color-Program extends Shader-Program
+(class Color-Program extends Program
   
   
   ;; Attribute Locations
@@ -113,8 +114,8 @@ void main()
   
   
   (method override (prepare self)
-    (set-vs self (default-vertex-shader self))
-    (set-fs self (default-fragment-shader self))
+    (set-vs self (create-vertex-shader self))
+    (set-fs self (create-fragment-shader self))
     (link self)
     (set! vertex-attribute (add-attribute self "position"))
     (set! normal-attribute (add-attribute self "normal"))
@@ -123,10 +124,10 @@ void main()
     (set! view_matrix-uniform (add-uniform self "view_matrix")))
   
   
-  (method override (default-vertex-shader self)
+  (method override (create-vertex-shader self)
     color-vert)
   
-  (method override (default-fragment-shader self)
+  (method override (create-fragment-shader self)
     color-frag)
   
   
