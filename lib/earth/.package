@@ -20,6 +20,16 @@
                         (run earth.mesh)
                         (build (earth.mesh executable: "03Mesh"))
                         (update earth.mesh))
+            (earth.texture (alias texture)
+                           (title "Texture")
+                           (run earth.texture)
+                           (build (earth.texture executable: "04Texture"))
+                           (update earth.texture))
+            (earth.model (alias model)
+                         (title "Model")
+                         (run earth.model)
+                         (build (earth.model executable: "05Model"))
+                         (update earth.model))
             (earth (dependencies jazz
                                  jazz.action
                                  jazz.application
@@ -60,5 +70,7 @@
                                  gaea
                                  earth.triangle
                                  earth.array
-                                 earth.mesh)))
+                                 earth.mesh
+                                 earth.texture
+                                 earth.model)))
   (project ".project"))

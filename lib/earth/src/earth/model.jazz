@@ -2,7 +2,7 @@
 ;;;  GaeaScheme
 ;;;==============
 ;;;
-;;;; Earth Mesh
+;;;; Earth Model
 ;;;
 ;;;  The contents of this file are subject to the Mozilla Public License Version
 ;;;  1.1 (the "License"); you may not use this file except in compliance with
@@ -35,10 +35,11 @@
 ;;;  See www.jazzscheme.org for details.
 
 
-(module earth.mesh jazz
+(module earth.model jazz
 
 
 (import (jazz.application)
+        (jazz.geometry)
         (jazz.graphic)
         (jazz.io)
         (jazz.markup)
@@ -57,8 +58,10 @@
         (gaea.mesher)
         (gaea.program)
         (gaea.program.mesh)
-        (gaea.program.texture)
-        (gaea.shader))
+        (gaea.program.model)
+        (gaea.shader)
+        (gaea.texture)
+        (gaea.uv))
 
 
 ;;;
@@ -66,25 +69,30 @@
 ;;;
 
 
-(class Mesh-Window extends OpenGL-Window
+(class Model-Window extends OpenGL-Window
   
   
   (form
-    (<install> caption-base: "Mesh"))
+    (<install> caption-base: "Model"))
   
   
   ;; Programs
   (slot mesh-program        initialize #f getter generate)
   
   ;; Meshes
-  (slot texture-mesh        initialize #f getter generate)
+  (slot model-mesh          initialize #f getter generate)
   
   ;; Matrices
   (slot projection-matrix   initialize (make-matrix) getter generate)
   (slot view-matrix         initialize (make-matrix) getter generate)
+  (slot model-matrix        initialize (make-matrix) getter generate)
   
   ;; Textures
   (slot texture             initialize #f getter generate)
+  (slot animate?            initialize #t getter generate)
+  (slot angle               initialize -90. getter generate)
+  (slot elevation           initialize 0. getter generate)
+  (slot direction           initialize 1. getter generate)
   
   ;; Render
   (slot render-thread       initialize #f getter generate)
@@ -102,7 +110,7 @@
   
   
   (method (setup-programs self)
-    (set! mesh-program (require-program 'texture)))
+    (set! mesh-program (require-program 'model)))
   
   
   (method (start-render self)
@@ -132,22 +140,43 @@
   
   
   (method (initialize-meshes self)
-    (define content
-      #f32( 1.0 0.0 -5.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0
-            3.0 0.0 -5.0 1.0 0.0 0.0 1.0 0.0 0.0 0.0
-            3.0 2.0 -5.0 1.0 0.0 0.0 1.0 1.0 0.0 0.0
-            3.0 2.0 -5.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0
-            1.0 2.0 -5.0 1.0 0.0 0.0 0.0 1.0 0.0 0.0
-            1.0 0.0 -5.0 1.0 0.0 0.0 1.0 1.0 0.0 0.0 ))
-    
     (define (create-mesh)
-      (let ((mesh (new Mesh)))
-        (allocate-vertices mesh)
-        (set-data (get-vertices-buffer mesh) content (f32vector-length content) vertex-floats)
-        (setup-array mesh mesh-program)
-        mesh))
+      (let ((mesher (new Mesher 0 2))
+            (v1 (vertex -8.0 -4.0 0.0))
+            (v2 (vertex  0.0 -4.0 0.0))
+            (v3 (vertex  8.0 -4.0 0.0))
+            (v4 (vertex -8.0  0.0 0.0))
+            (v5 (vertex  0.0  0.0 0.0))
+            (v6 (vertex  8.0  0.0 0.0))
+            (v7 (vertex -8.0  4.0 0.0))
+            (v8 (vertex  0.0  4.0 0.0))
+            (v9 (vertex  8.0  4.0 0.0))
+            (normal (vertex 0. 0. 1.))
+            (tl uv/left)
+            (tt uv/top)
+            (tr uv/right)
+            (tb uv/bottom))
+        (let ((uv (uv 0. 0. .5 1. 0.))
+              (depth 0.))
+          (add-quad mesher
+                    v1 normal tl tb 0
+                    v2 normal tr tb 1
+                    v8 normal tr tt 1
+                    v7 normal tl tt 0
+                    uv
+                    depth))
+        (let ((uv (uv .5 0. 1. 1. 0.))
+              (depth 0.))
+          (add-quad mesher
+                    v2 normal tl tb 1
+                    v3 normal tr tb 2
+                    v9 normal tr tt 2
+                    v8 normal tl tt 1
+                    uv
+                    depth))
+        (get-mesh mesher mesh-program)))
     
-    (set! texture-mesh (create-mesh)))
+    (set! model-mesh (create-mesh)))
   
   
   ;;;
@@ -165,10 +194,12 @@
       (make-perspective-matrix! projection-matrix 53.13 ratio 1.0 30.0))
     
     ;; View
-    (make-view-matrix! view-matrix (vertex 7. 2. 6.) (lookat (vertex -.513 -.110 -.852) (vertex -.056 .994 -.094) (vertex .857 -4.195e-8 -.516)))
+    ;(make-view-matrix! view-matrix (vertex 7. 2. 6.) (lookat (vertex -.513 -.110 -.852) (vertex -.056 .994 -.094) (vertex .857 -4.195e-8 -.516)))
+    (make-view-matrix! view-matrix (vertex 0. 0. 12.) (make-standard-lookat))
     
-    ;; Textures
-    (set! texture (make-cairo-texture 100 100)))
+    ;; Model
+    ;(make-translation-matrix! model-matrix (vertex -2. 0. -5.))
+    (make-identity-matrix! model-matrix))
   
   
   ;;;
@@ -181,18 +212,49 @@
     (glClearColor 0.0 0.0 0.0 0.0)
     (glClear (bitwise-ior GL_COLOR_BUFFER_BIT GL_DEPTH_BUFFER_BIT))
     
+    ;; Texture
+    (when (not texture)
+      (set! texture (make-file-cairo-texture {File Home "Media" "Oasis.png"}))
+      (let ((surface (get-surface texture)))
+        (flush surface)
+        (map-texture texture)))
+    
     ;; Mesh
-    (let ((surface (get-surface texture)))
-      (fill-rect surface {Rect 0 0 100 100} {Color Red})
-      (fill-rect surface {Rect 20 20 80 80} {Color Blue})
-      (flush surface)
-      (map-texture texture))
     (use mesh-program)
     (bind-material mesh-program (get-id texture))
-    (bind-uniforms mesh-program projection-matrix view-matrix)
-    (draw-array texture-mesh)
+    (let ((projection (sqrt (- (expt 8. 2.) (expt elevation 2.)))))
+      (let ((translation (- 8. projection)))
+        (bind-bones mesh-program (list (make-translation-matrix (vertex translation 0. 0.))
+                                       (make-translation-matrix (vertex 0. 0. (- elevation)))
+                                       (make-translation-matrix (vertex (- translation) 0. 0.))))))
+    @w
+    (bind-bones mesh-program (list (make-identity-matrix)
+                                   (make-identity-matrix)
+                                   (make-y-rotation-matrix (degree->radian (between 0. angle 180.)))))
+    (bind-uniforms mesh-program projection-matrix view-matrix model-matrix)
+    (draw-array model-mesh)
     (unbind-uniforms mesh-program)
-    (unuse mesh-program)))
+    (unuse mesh-program)
+    
+    ;; Elevation
+    (when animate?
+    (when (< elevation 8.)
+      (set! elevation (min 8. (+ elevation .05)))))
+    
+    ;; Angle
+    (when animate?
+    (cond ((= direction 1.)
+           (set! angle (+ angle 3.))
+           (when (>= angle 270.)
+             (set! direction -1)))
+          (else
+           (set! angle (- angle 3.))
+           (when (<= angle -90.)
+             (set! direction 1.))))))
+  
+  
+  (method override (key-press self c)
+    (set! animate? (not animate?))))
 
 
 ;;;
@@ -200,11 +262,11 @@
 ;;;
 
 
-(class Mesh-Application extends Application
+(class Model-Application extends Application
   
   
   (method override (new-toplevel self)
-    (new-opengl-window class: Mesh-Window position: {Point 200 150} size: {Dimension 800 500})))
+    (new-opengl-window class: Model-Window position: {Point 200 150} size: {Dimension 800 500})))
 
 
 ;;;
@@ -212,9 +274,9 @@
 ;;;
 
 
-(definition (run-mesh descriptor)
-  (boot-environment (new Mesh-Application)))
+(definition (run-model descriptor)
+  (boot-environment (new Model-Application)))
 
 
-(register-product-run 'earth.mesh
-  run-mesh))
+(register-product-run 'earth.model
+  run-model))

@@ -54,8 +54,7 @@
         (gaea.geometry)
         (gaea.program)
         (gaea.program.color)
-        (gaea.shader)
-        (gaea.shaders))
+        (gaea.shader))
 
 
 ;;;
@@ -198,7 +197,7 @@
   
   
   (method override (new-toplevel self)
-    (new-opengl-window class: Array-Window size: {Dimension 640 360})))
+    (new-opengl-window class: Array-Window position: {Point 200 150} size: {Dimension 800 500})))
 
 
 ;;;

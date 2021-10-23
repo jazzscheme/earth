@@ -2,7 +2,7 @@
 ;;;  GaeaScheme
 ;;;==============
 ;;;
-;;;; Earth Mesh
+;;;; Earth Texture
 ;;;
 ;;;  The contents of this file are subject to the Mozilla Public License Version
 ;;;  1.1 (the "License"); you may not use this file except in compliance with
@@ -35,7 +35,7 @@
 ;;;  See www.jazzscheme.org for details.
 
 
-(module earth.mesh jazz
+(module earth.texture jazz
 
 
 (import (jazz.application)
@@ -58,7 +58,9 @@
         (gaea.program)
         (gaea.program.mesh)
         (gaea.program.texture)
-        (gaea.shader))
+        (gaea.shader)
+        (gaea.texture)
+        (gaea.uv))
 
 
 ;;;
@@ -66,11 +68,11 @@
 ;;;
 
 
-(class Mesh-Window extends OpenGL-Window
+(class Texture-Window extends OpenGL-Window
   
   
   (form
-    (<install> caption-base: "Mesh"))
+    (<install> caption-base: "Texture"))
   
   
   ;; Programs
@@ -132,20 +134,27 @@
   
   
   (method (initialize-meshes self)
-    (define content
-      #f32( 1.0 0.0 -5.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0
-            3.0 0.0 -5.0 1.0 0.0 0.0 1.0 0.0 0.0 0.0
-            3.0 2.0 -5.0 1.0 0.0 0.0 1.0 1.0 0.0 0.0
-            3.0 2.0 -5.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0
-            1.0 2.0 -5.0 1.0 0.0 0.0 0.0 1.0 0.0 0.0
-            1.0 0.0 -5.0 1.0 0.0 0.0 1.0 1.0 0.0 0.0 ))
-    
     (define (create-mesh)
-      (let ((mesh (new Mesh)))
-        (allocate-vertices mesh)
-        (set-data (get-vertices-buffer mesh) content (f32vector-length content) vertex-floats)
-        (setup-array mesh mesh-program)
-        mesh))
+      (let ((mesher (new Mesher 0 1))
+            (v1 (vertex -10.0 -6.0 -5.0))
+            (v2 (vertex   6.0 -6.0 -5.0))
+            (v3 (vertex   6.0  6.0 -5.0))
+            (v4 (vertex -10.0  6.0 -5.0))
+            (normal (vertex 0. 0. 1.))
+            (uv (uv 0. 0. 1. 1. 0.))
+            (depth 0.)
+            (tl uv/left)
+            (tt uv/top)
+            (tr uv/right)
+            (tb uv/bottom))
+        (add-quad mesher
+                  v1 normal tl tb 0
+                  v2 normal tr tb 0
+                  v3 normal tr tt 0
+                  v4 normal tl tt 0
+                  uv
+                  depth)
+        (get-mesh mesher mesh-program)))
     
     (set! texture-mesh (create-mesh)))
   
@@ -165,10 +174,7 @@
       (make-perspective-matrix! projection-matrix 53.13 ratio 1.0 30.0))
     
     ;; View
-    (make-view-matrix! view-matrix (vertex 7. 2. 6.) (lookat (vertex -.513 -.110 -.852) (vertex -.056 .994 -.094) (vertex .857 -4.195e-8 -.516)))
-    
-    ;; Textures
-    (set! texture (make-cairo-texture 100 100)))
+    (make-view-matrix! view-matrix (vertex 7. 2. 6.) (lookat (vertex -.513 -.110 -.852) (vertex -.056 .994 -.094) (vertex .857 -4.195e-8 -.516))))
   
   
   ;;;
@@ -181,12 +187,14 @@
     (glClearColor 0.0 0.0 0.0 0.0)
     (glClear (bitwise-ior GL_COLOR_BUFFER_BIT GL_DEPTH_BUFFER_BIT))
     
+    ;; Texture
+    (when (not texture)
+      (set! texture (make-file-cairo-texture {File Home "Media" "Oasis.png"}))
+      (let ((surface (get-surface texture)))
+        (flush surface)
+        (map-texture texture)))
+    
     ;; Mesh
-    (let ((surface (get-surface texture)))
-      (fill-rect surface {Rect 0 0 100 100} {Color Red})
-      (fill-rect surface {Rect 20 20 80 80} {Color Blue})
-      (flush surface)
-      (map-texture texture))
     (use mesh-program)
     (bind-material mesh-program (get-id texture))
     (bind-uniforms mesh-program projection-matrix view-matrix)
@@ -200,11 +208,11 @@
 ;;;
 
 
-(class Mesh-Application extends Application
+(class Texture-Application extends Application
   
   
   (method override (new-toplevel self)
-    (new-opengl-window class: Mesh-Window position: {Point 200 150} size: {Dimension 800 500})))
+    (new-opengl-window class: Texture-Window position: {Point 200 150} size: {Dimension 800 500})))
 
 
 ;;;
@@ -212,9 +220,9 @@
 ;;;
 
 
-(definition (run-mesh descriptor)
-  (boot-environment (new Mesh-Application)))
+(definition (run-texture descriptor)
+  (boot-environment (new Texture-Application)))
 
 
-(register-product-run 'earth.mesh
-  run-mesh))
+(register-product-run 'earth.texture
+  run-texture))
