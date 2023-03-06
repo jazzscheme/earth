@@ -339,7 +339,7 @@ void main()
   
   
   (method override (new-toplevel self)
-    (new-opengl-window class: Triangle-Window position: {Point 200 150} size: {Dimension 800 500})))
+    (new Triangle-Window position: {Point 200 150} size: {Dimension 800 500})))
 
 
 ;;;
