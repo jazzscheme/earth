@@ -45,6 +45,7 @@
                                  jazz.handler
                                  jazz.history
                                  jazz.layout
+                                 jazz.listener
                                  jazz.locale
                                  jazz.markup
                                  jazz.math
@@ -58,6 +59,7 @@
                                  jazz.screen
                                  jazz.settings
                                  jazz.snapshot
+                                 jazz.stream
                                  jazz.syntax
                                  jazz.template
                                  jazz.text
@@ -68,6 +70,8 @@
                                  jazz.window
                                  jazz.workspace
                                  gaea
+                                 gaea.foreign
+                                 gaea.metal
                                  earth.triangle
                                  earth.array
                                  earth.mesh

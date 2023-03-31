@@ -48,7 +48,6 @@
         (jazz.opengl)
         (jazz.opengl.glew)
         (jazz.opengl.texture)
-        (jazz.opengl.window)
         (jazz.screen)
         (gaea.array)
         (gaea.buffer)
@@ -61,7 +60,8 @@
         (gaea.program.model)
         (gaea.shader)
         (gaea.texture)
-        (gaea.uv))
+        (gaea.uv)
+        (gaea.window))
 
 
 ;;;
@@ -69,7 +69,7 @@
 ;;;
 
 
-(class Model-Window extends OpenGL-Window
+(class Model-Window extends Gaea-Window
   
   
   (form

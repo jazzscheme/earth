@@ -46,11 +46,11 @@
         (jazz.process)
         (jazz.opengl)
         (jazz.opengl.glew)
-        (jazz.opengl.window)
         (jazz.screen)
         (gaea.geometry)
         (gaea.program)
-        (gaea.shader))
+        (gaea.shader)
+        (gaea.window))
 
 
 ;;;
@@ -193,7 +193,7 @@ void main()
 ;;;
 
 
-(class Triangle-Window extends OpenGL-Window
+(class Triangle-Window extends Gaea-Window
   
   
   (form
