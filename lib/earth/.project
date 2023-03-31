@@ -21,4 +21,5 @@
         (<Jazz-File>       name: mesh     source: {File :context "src" "earth" "mesh.jazz"})
         (<Jazz-File>       name: array    source: {File :context "src" "earth" "array.jazz"})
         (<Jazz-File>       name: texture  source: {File :context "src" "earth" "texture.jazz"})
-        (<Jazz-File>       name: model    source: {File :context "src" "earth" "model.jazz"}))))))
+        (<Jazz-File>       name: model    source: {File :context "src" "earth" "model.jazz"})
+        (<Jazz-File>       name: clear    source: {File :context "src" "earth" "clear.jazz"}))))))

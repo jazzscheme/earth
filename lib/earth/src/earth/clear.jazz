@@ -2,7 +2,7 @@
 ;;;  GaeaScheme
 ;;;==============
 ;;;
-;;;; Earth Array
+;;;; Earth Clear
 ;;;
 ;;;  The contents of this file are subject to the Mozilla Public License Version
 ;;;  1.1 (the "License"); you may not use this file except in compliance with
@@ -35,7 +35,7 @@
 ;;;  See www.jazzscheme.org for details.
 
 
-(module earth.array jazz
+(module earth.clear jazz
 
 
 (import (jazz.application)
@@ -47,12 +47,8 @@
         (jazz.opengl)
         (jazz.opengl.glew)
         (jazz.screen)
-        (gaea.array)
-        (gaea.buffer)
-        (gaea.generate)
         (gaea.geometry)
         (gaea.program)
-        (gaea.program.color)
         (gaea.shader)
         (gaea.window))
 
@@ -62,26 +58,15 @@
 ;;;
 
 
-(class Array-Window extends Gaea-Window
+(class Clear-Window extends Gaea-Window
   
   
   (form
-    (<install> caption-base: "Array"))
+    (<install> caption-base: "Clear"))
   
-  
-  ;; Programs
-  (slot color-program       initialize #f getter generate)
-  
-  ;; Arrays
-  (slot blue-array          initialize #f getter generate)
-  (slot red-array           initialize #f getter generate)
-  
-  ;; Matrices
-  (slot projection-matrix   initialize (make-matrix) getter generate)
-  (slot view-matrix         initialize (make-matrix) getter generate)
   
   ;; Render
-  (slot render-thread       initialize #f getter generate)
+  (slot render-thread initialize #f getter generate)
   
   
   (method override (destroy self)
@@ -90,13 +75,7 @@
   
   
   (method override (setup-engine self)
-    (setup-programs self)
-    (initialize-arrays self)
     (start-render self))
-  
-  
-  (method (setup-programs self)
-    (set! color-program (require-program 'color)))
   
   
   (method (start-render self)
@@ -121,52 +100,15 @@
   
   
   ;;;
-  ;;;; Arrays
-  ;;;
-  
-  
-  (method (initialize-arrays self)
-    (define (array-generate data)
-      (let ((array (new Color-Array)))
-        (allocate-vertices array)
-        (set-data (get-vertices-buffer array) data color-triangle-floats color-vertex-floats)
-        (setup-array array color-program)
-        array))
-    
-    (set! red-array (create-red self array-generate))
-    (set! blue-array (create-blue self array-generate)))
-  
-  
-  (method (create-red self generate)
-    (generate
-      #f32( 1.0 0.0 -5.0 1.0 0.0 0.0
-            3.0 0.0 -5.0 1.0 0.0 0.0
-            2.0 2.0 -5.0 1.0 0.0 0.0)))
-  
-  
-  (method (create-blue self generate)
-    (generate
-      #f32( -3.0 0.0 -5.0 0.0 0.0 1.0
-            -1.0 0.0 -5.0 0.0 0.0 1.0
-            -2.0 2.0 -5.0 0.0 0.0 1.0)))
-  
-  
-  ;;;
   ;;;; Resize
   ;;;
   
   
   (method override (resize-scene self width <fl> height <fl>)
-    ;; Viewport
-    (let ((scale-factor (main-screen-scale-factor)))
-      (glViewport 0 0 (* scale-factor (fxround width)) (* scale-factor (fxround height))))
-    
-    ;; Projection
-    (let ((ratio (/ width height)))
-      (make-perspective-matrix! projection-matrix 53.13 ratio 1.0 30.0))
-    
-    ;; View
-    (make-view-matrix! view-matrix (vertex 7. 2. 6.) (lookat (vertex -.513 -.110 -.852) (vertex -.056 .994 -.094) (vertex .857 -4.195e-8 -.516))))
+    (when (opengl? self)
+      ;; Viewport
+      (let ((scale-factor (main-screen-scale-factor)))
+        (glViewport 0 0 (* scale-factor (fxround width)) (* scale-factor (fxround height))))))
   
   
   ;;;
@@ -175,17 +117,12 @@
   
   
   (method override (draw-scene self)
-    ;; Background
-    (glClearColor 0.0 0.0 0.0 0.0)
-    (glClear (bitwise-ior GL_COLOR_BUFFER_BIT GL_DEPTH_BUFFER_BIT))
-    
-    ;; Color
-    (use color-program)
-    (bind-uniforms color-program projection-matrix view-matrix)
-    (draw-array red-array)
-    (draw-array blue-array)
-    (unbind-uniforms color-program)
-    (unuse color-program)))
+    (if (opengl? self)
+        (begin
+          ;; Background
+          (glClearColor 0.0 0.0 1.0 0.0)
+          (glClear (bitwise-ior GL_COLOR_BUFFER_BIT GL_DEPTH_BUFFER_BIT)))
+      (gaea.engine.metal:render-metal-window self))))
 
 
 ;;;
@@ -193,11 +130,11 @@
 ;;;
 
 
-(class Array-Application extends Application
+(class Clear-Application extends Application
   
   
   (method override (new-toplevel self)
-    (new Array-Window position: {Point 200 150} size: {Dimension 800 500})))
+    (new Clear-Window position: {Point 200 150} size: {Dimension 800 500})))
 
 
 ;;;
@@ -205,9 +142,9 @@
 ;;;
 
 
-(definition (run-array descriptor)
-  (boot-environment (new Array-Application)))
+(definition (run-clear descriptor)
+  (boot-environment (new Clear-Application)))
 
 
-(register-product-run 'earth.array
-  run-array))
+(register-product-run 'earth.clear
+  run-clear))

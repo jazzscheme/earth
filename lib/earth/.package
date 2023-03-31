@@ -5,7 +5,12 @@
   (authors "Guillaume Cartier")
   (stage release)
   (root "src")
-  (products (earth.triangle (alias triangle)
+  (products (earth.clear (alias clear)
+                         (title "Clear")
+                         (run earth.clear)
+                         (build (earth.clear executable: "00Clear"))
+                         (update earth.clear))
+            (earth.triangle (alias triangle)
                             (title "Triangle")
                             (run earth.triangle)
                             (build (earth.triangle executable: "01Triangle"))
@@ -72,6 +77,7 @@
                                  gaea
                                  gaea.foreign
                                  gaea.metal
+                                 earth.clear
                                  earth.triangle
                                  earth.array
                                  earth.mesh
