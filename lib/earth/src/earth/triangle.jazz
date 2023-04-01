@@ -48,6 +48,7 @@
         (jazz.opengl.glew)
         (jazz.screen)
         (gaea.geometry)
+        (gaea.metal)
         (gaea.program)
         (gaea.shader)
         (gaea.window))
@@ -207,6 +208,9 @@ void main()
   (slot blue-array          initialize #f getter generate)
   (slot red-array           initialize #f getter generate)
   
+  ;; Pipeline
+  (slot color-pipeline      initialize #f getter generate)
+  
   ;; Matrices
   (slot projection-matrix   initialize (make-matrix) getter generate)
   (slot view-matrix         initialize (make-matrix) getter generate)
@@ -221,8 +225,11 @@ void main()
   
   
   (method override (setup-engine self)
-    (create-programs self)
-    (initialize-arrays self)
+    (if (opengl? self)
+        (begin
+          (create-programs self)
+          (initialize-arrays self))
+      (create-pipelines self))
     (start-render self))
   
   
@@ -292,14 +299,45 @@ void main()
   
   
   ;;;
+  ;;;; Pipelines
+  ;;;
+  
+  
+  (method (create-pipelines self)
+    (let ((lib (metalMakeLibrary
+#/C/
+    #include <metal_stdlib>
+    
+    using namespace metal;
+    
+    vertex float4 v_simple(
+        constant float4* in  [[buffer(0)]],
+        uint             vid [[vertex_id]])
+    {
+        return in[vid];
+    }
+    
+    fragment float4 f_simple(
+        float4 in [[stage_in]])
+    {
+        return float4(1, 0, 0, 1);
+    }
+//#
+)))
+      (let ((pipeline (metalMakePipeline lib)))
+        (set! color-pipeline pipeline))))
+  
+  
+  ;;;
   ;;;; Resize
   ;;;
   
   
   (method override (resize-scene self width <fl> height <fl>)
-    ;; Viewport
-    (let ((scale-factor (main-screen-scale-factor)))
-      (glViewport 0 0 (* scale-factor (fxround width)) (* scale-factor (fxround height))))
+    (when (opengl? self)
+      ;; Viewport
+      (let ((scale-factor (main-screen-scale-factor)))
+        (glViewport 0 0 (* scale-factor (fxround width)) (* scale-factor (fxround height)))))
     
     ;; Projection
     (let ((ratio (/ width height)))
@@ -315,19 +353,22 @@ void main()
   
   
   (method override (draw-scene self)
-    ;; Background
-    (glClearColor 0.0 0.0 0.0 0.0)
-    (glClear (bitwise-ior GL_COLOR_BUFFER_BIT GL_DEPTH_BUFFER_BIT))
-    
-    ;; Color
-    (use color-program)
-    (bind-uniforms color-program projection-matrix view-matrix)
-    (glBindVertexArray (get-array blue-array))
-    (glDrawArrays GL_TRIANGLES 0 3)
-    (glBindVertexArray (get-array red-array))
-    (glDrawArrays GL_TRIANGLES 0 3)
-    (unbind-uniforms color-program)
-    (unuse color-program)))
+    (if (opengl? self)
+        (begin
+          ;; Background
+          (glClearColor 0.0 0.0 0.0 0.0)
+          (glClear (bitwise-ior GL_COLOR_BUFFER_BIT GL_DEPTH_BUFFER_BIT))
+          
+          ;; Color
+          (use color-program)
+          (bind-uniforms color-program projection-matrix view-matrix)
+          (glBindVertexArray (get-array blue-array))
+          (glDrawArrays GL_TRIANGLES 0 3)
+          (glBindVertexArray (get-array red-array))
+          (glDrawArrays GL_TRIANGLES 0 3)
+          (unbind-uniforms color-program)
+          (unuse color-program))
+      (gaea.engine.metal:render-metal-triangle self color-pipeline))))
 
 
 ;;;
