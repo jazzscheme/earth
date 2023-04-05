@@ -363,29 +363,6 @@ void main()
   
   
   (method (create-buffers self)
-    (set! uniform-buffer (let ((content (make-f32vector (* 3 16))))
-                           (define (make-identity! offset)
-                             (f32vector-set! content (+ offset  0) 1.)
-                             (f32vector-set! content (+ offset  1) 0.)
-                             (f32vector-set! content (+ offset  2) 0.)
-                             (f32vector-set! content (+ offset  3) 0.)
-                             (f32vector-set! content (+ offset  4) 0.)
-                             (f32vector-set! content (+ offset  5) 1.)
-                             (f32vector-set! content (+ offset  6) 0.)
-                             (f32vector-set! content (+ offset  7) 0.)
-                             (f32vector-set! content (+ offset  8) 0.)
-                             (f32vector-set! content (+ offset  9) 0.)
-                             (f32vector-set! content (+ offset 10) 1.)
-                             (f32vector-set! content (+ offset 11) 0.)
-                             (f32vector-set! content (+ offset 12) 0.)
-                             (f32vector-set! content (+ offset 13) 0.)
-                             (f32vector-set! content (+ offset 14) 0.)
-                             (f32vector-set! content (+ offset 15) 1.))
-                           
-                           (make-identity! 0)
-                           (make-identity! 16)
-                           (make-identity! 32)
-                           (metalNewBufferWithBytes content (f32vector-length content))))
     (set! vertex-buffer (let ((content (f32vector
                                           0. 0. 0. 1.   1. 0. 0. 1.
                                          -1. 1. 0. 1.   0. 1. 0. 1.
@@ -409,7 +386,33 @@ void main()
       (make-perspective-matrix! projection-matrix 53.13 ratio 1.0 30.0))
     
     ;; View
-    (make-view-matrix! view-matrix (vertex 7. 2. 6.) (lookat (vertex -.513 -.110 -.852) (vertex -.056 .994 -.094) (vertex .857 -4.195e-8 -.516))))
+    (make-view-matrix! view-matrix (vertex 7. 2. 6.) (lookat (vertex -.513 -.110 -.852) (vertex -.056 .994 -.094) (vertex .857 -4.195e-8 -.516)))
+    
+    (unless (opengl? self)
+      ;; Uniforms
+      (set! uniform-buffer (let ((content (make-f32vector (* 3 16))))
+                             (define (transfer! offset mat)
+                               (f32vector-set! content (+ offset  0) (matrix-ref mat 0))
+                               (f32vector-set! content (+ offset  1) (matrix-ref mat 1))
+                               (f32vector-set! content (+ offset  2) (matrix-ref mat 2))
+                               (f32vector-set! content (+ offset  3) (matrix-ref mat 3))
+                               (f32vector-set! content (+ offset  4) (matrix-ref mat 4))
+                               (f32vector-set! content (+ offset  5) (matrix-ref mat 5))
+                               (f32vector-set! content (+ offset  6) (matrix-ref mat 6))
+                               (f32vector-set! content (+ offset  7) (matrix-ref mat 7))
+                               (f32vector-set! content (+ offset  8) (matrix-ref mat 8))
+                               (f32vector-set! content (+ offset  9) (matrix-ref mat 9))
+                               (f32vector-set! content (+ offset 10) (matrix-ref mat 10))
+                               (f32vector-set! content (+ offset 11) (matrix-ref mat 11))
+                               (f32vector-set! content (+ offset 12) (matrix-ref mat 12))
+                               (f32vector-set! content (+ offset 13) (matrix-ref mat 13))
+                               (f32vector-set! content (+ offset 14) (matrix-ref mat 14))
+                               (f32vector-set! content (+ offset 15) (matrix-ref mat 15)))
+                             
+                             (transfer!  0 projection-matrix)
+                             (transfer! 16 view-matrix)
+                             (transfer! 32 (make-identity-matrix))
+                             (metalNewBufferWithBytes content (f32vector-length content))))))
   
   
   ;;;
