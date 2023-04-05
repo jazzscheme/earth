@@ -47,6 +47,7 @@
         (jazz.opengl)
         (jazz.opengl.glew)
         (jazz.screen)
+        (gaea.engine.metal)
         (gaea.geometry)
         (gaea.metal)
         (gaea.program)
@@ -324,7 +325,7 @@ void main()
     }
 //#
 )))
-      (let ((pipeline (metalMakePipeline lib)))
+      (let ((pipeline (metalMakePipeline lib "v_simple" "f_simple")))
         (set! color-pipeline pipeline))))
   
   
@@ -368,7 +369,17 @@ void main()
           (glDrawArrays GL_TRIANGLES 0 3)
           (unbind-uniforms color-program)
           (unuse color-program))
-      (gaea.engine.metal:render-metal-triangle self color-pipeline))))
+      (let ((layer (get-window-layer self)))
+        (let ((drawable (metalLayerNextDrawable layer)))
+          (let ((buffer (metalMakeCommandBuffer))
+                (pass (metalMakeRenderPassDescriptor drawable)))
+            (let ((encoder (metalMakeRenderCommandEncoder buffer pass)))
+              (metalEncoderSetRenderPipelineState encoder color-pipeline)
+              (metalEncoderSetBytes encoder)
+              (metalEncoderDrawPrimitives encoder)
+              (metalEndPresentCommit drawable buffer encoder))
+            @w
+            (metalReleaseCommandBuffer buffer)))))))
 
 
 ;;;

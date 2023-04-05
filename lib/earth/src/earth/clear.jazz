@@ -47,7 +47,9 @@
         (jazz.opengl)
         (jazz.opengl.glew)
         (jazz.screen)
+        (gaea.engine.metal)
         (gaea.geometry)
+        (gaea.metal)
         (gaea.program)
         (gaea.shader)
         (gaea.window))
@@ -122,7 +124,14 @@
           ;; Background
           (glClearColor 0.0 0.0 1.0 0.0)
           (glClear (bitwise-ior GL_COLOR_BUFFER_BIT GL_DEPTH_BUFFER_BIT)))
-      (gaea.engine.metal:render-metal-clear self))))
+      (let ((layer (get-window-layer self)))
+        (let ((drawable (metalLayerNextDrawable layer)))
+          (let ((buffer (metalMakeCommandBuffer))
+                (pass (metalMakeRenderPassDescriptorClear drawable 0. 0. 1.)))
+            (let ((encoder (metalMakeRenderCommandEncoder buffer pass)))
+              (metalEndPresentCommit drawable buffer encoder))
+            @w
+            (metalReleaseCommandBuffer buffer)))))))
 
 
 ;;;
