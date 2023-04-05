@@ -209,8 +209,12 @@ void main()
   (slot blue-array          initialize #f getter generate)
   (slot red-array           initialize #f getter generate)
   
-  ;; Pipeline
+  ;; Pipelines
   (slot color-pipeline      initialize #f getter generate)
+  
+  ;; Buffers
+  (slot uniform-buffer      initialize #f getter generate)
+  (slot vertex-buffer       initialize #f getter generate)
   
   ;; Matrices
   (slot projection-matrix   initialize (make-matrix) getter generate)
@@ -230,7 +234,8 @@ void main()
         (begin
           (create-programs self)
           (initialize-arrays self))
-      (create-pipelines self))
+      (create-pipelines self)
+      (create-buffers self))
     (start-render self))
   
   
@@ -310,23 +315,51 @@ void main()
     #include <metal_stdlib>
     
     using namespace metal;
+
+    struct vs_in
+    {
+        float4 position [[attribute(0)]];
+        float4 color [[attribute(1)]];
+    };
     
-    vertex float4 v_simple(
+    struct vs_out
+    {
+        float4 position [[position]];
+        float4 color;
+    };
+
+    vertex float4 vs(
         constant float4* in  [[buffer(0)]],
         uint             vid [[vertex_id]])
     {
         return in[vid];
     }
     
-    fragment float4 f_simple(
-        float4 in [[stage_in]])
+    fragment float4 fs(
+        float4 in [[stage_in]],
+        constant float4* color [[buffer(1)]])
     {
         return float4(1, 0, 0, 1);
     }
 //#
 )))
-      (let ((pipeline (metalMakePipeline lib "v_simple" "f_simple")))
+      (let ((pipeline (metalMakePipeline lib "vs" "fs")))
         (set! color-pipeline pipeline))))
+  
+  
+  ;;;
+  ;;;; Buffers
+  ;;;
+  
+  
+  (method (create-buffers self)
+    (set! uniform-buffer (let ((content (f32vector)))
+                           (metalNewBufferWithBytes content (f32vector-length content))))
+    (set! vertex-buffer (let ((content (f32vector
+                                          0. 0. 0. 1.   1. 0. 0. 1.
+                                         -1. 1. 0. 1.   1. 0. 0. 1.
+                                          1. 1. 0. 1.   1. 0. 0. 1.)))
+                          (metalNewBufferWithBytes content (f32vector-length content)))))
   
   
   ;;;
@@ -375,7 +408,8 @@ void main()
                 (pass (metalMakeRenderPassDescriptor drawable)))
             (let ((encoder (metalMakeRenderCommandEncoder buffer pass)))
               (metalEncoderSetRenderPipelineState encoder color-pipeline)
-              (metalEncoderSetBytes encoder)
+              (metalEncoderSetVertexBuffer encoder uniform-buffer 1)
+              (metalEncoderSetVertexBuffer encoder vertex-buffer 0)
               (metalEncoderDrawPrimitives encoder)
               (metalEndPresentCommit drawable buffer encoder))
             @w
