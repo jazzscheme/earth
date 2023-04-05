@@ -318,32 +318,42 @@ void main()
 
     struct vs_in
     {
-        float4 position [[attribute(0)]];
-        float4 color [[attribute(1)]];
+        float4 position [[position]];
+        float4 color;
     };
-    
+
     struct vs_out
     {
         float4 position [[position]];
         float4 color;
     };
 
-    vertex float4 vs(
-        constant float4* in  [[buffer(0)]],
-        uint             vid [[vertex_id]])
+    struct Uniforms
     {
-        return in[vid];
+        float4x4 projectionMatrix;
+        float4x4 viewMatrix;
+        float4x4 modelMatrix;
+    };
+
+    vertex vs_out vertex_simple(
+        const device vs_in *vertices [[buffer(0)]],
+        constant Uniforms *uniforms  [[buffer(1)]],
+        uint vid [[vertex_id]])
+    {
+        vs_out vertexOut;
+        vertexOut.position = uniforms->projectionMatrix * uniforms->viewMatrix * uniforms->modelMatrix * vertices[vid].position;
+        vertexOut.color = vertices[vid].color;
+        return vertexOut;
     }
     
-    fragment float4 fs(
-        float4 in [[stage_in]],
-        constant float4* color [[buffer(1)]])
+    fragment float4 fragment_simple(
+        vs_out vert [[stage_in]])
     {
-        return float4(1, 0, 0, 1);
+        return vert.color;
     }
 //#
 )))
-      (let ((pipeline (metalMakePipeline lib "vs" "fs")))
+      (let ((pipeline (metalMakePipeline lib "vertex_simple" "fragment_simple")))
         (set! color-pipeline pipeline))))
   
   
@@ -353,12 +363,33 @@ void main()
   
   
   (method (create-buffers self)
-    (set! uniform-buffer (let ((content (f32vector)))
+    (set! uniform-buffer (let ((content (make-f32vector (* 3 16))))
+                           (define (make-identity! offset)
+                             (f32vector-set! content (+ offset  0) 1.)
+                             (f32vector-set! content (+ offset  1) 0.)
+                             (f32vector-set! content (+ offset  2) 0.)
+                             (f32vector-set! content (+ offset  3) 0.)
+                             (f32vector-set! content (+ offset  4) 0.)
+                             (f32vector-set! content (+ offset  5) 1.)
+                             (f32vector-set! content (+ offset  6) 0.)
+                             (f32vector-set! content (+ offset  7) 0.)
+                             (f32vector-set! content (+ offset  8) 0.)
+                             (f32vector-set! content (+ offset  9) 0.)
+                             (f32vector-set! content (+ offset 10) 1.)
+                             (f32vector-set! content (+ offset 11) 0.)
+                             (f32vector-set! content (+ offset 12) 0.)
+                             (f32vector-set! content (+ offset 13) 0.)
+                             (f32vector-set! content (+ offset 14) 0.)
+                             (f32vector-set! content (+ offset 15) 1.))
+                           
+                           (make-identity! 0)
+                           (make-identity! 16)
+                           (make-identity! 32)
                            (metalNewBufferWithBytes content (f32vector-length content))))
     (set! vertex-buffer (let ((content (f32vector
                                           0. 0. 0. 1.   1. 0. 0. 1.
-                                         -1. 1. 0. 1.   1. 0. 0. 1.
-                                          1. 1. 0. 1.   1. 0. 0. 1.)))
+                                         -1. 1. 0. 1.   0. 1. 0. 1.
+                                          1. 1. 0. 1.   0. 0. 1. 1.)))
                           (metalNewBufferWithBytes content (f32vector-length content)))))
   
   
