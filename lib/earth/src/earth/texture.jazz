@@ -50,10 +50,12 @@
         (jazz.screen)
         (gaea.array)
         (gaea.buffer)
+        (gaea.engine.metal)
         (gaea.generate)
         (gaea.geometry)
         (gaea.mesh)
         (gaea.mesher)
+        (gaea.metal)
         (gaea.program)
         (gaea.program.mesh)
         (gaea.program.texture)
@@ -81,6 +83,14 @@
   ;; Meshes
   (slot texture-mesh        initialize #f getter generate)
   
+  ;; Pipelines
+  (slot texture-pipeline    initialize #f getter generate)
+  
+  ;; Buffers
+  (slot uniform-buffer      initialize #f getter generate)
+  (slot texture-buffer      initialize #f getter generate)
+  (slot texture-vertices    initialize #f getter generate)
+  
   ;; Matrices
   (slot projection-matrix   initialize (make-matrix) getter generate)
   (slot view-matrix         initialize (make-matrix) getter generate)
@@ -98,8 +108,12 @@
   
   
   (method override (setup-engine self)
-    (setup-programs self)
-    (initialize-meshes self)
+    (if (opengl? self)
+        (begin
+          (setup-programs self)
+          (initialize-meshes self))
+      (create-pipelines self)
+      (create-buffers self))
     (start-render self))
   
   
@@ -160,21 +174,119 @@
   
   
   ;;;
+  ;;;; Pipelines
+  ;;;
+  
+  
+  (method (create-pipelines self)
+    (let ((lib (metalMakeLibrary
+#/C/
+    #include <metal_stdlib>
+    
+    using namespace metal;
+
+    struct vs_in
+    {
+        float4 position [[position]];
+        float2 texCoords;
+    };
+
+    struct vs_out
+    {
+        float4 position [[position]];
+        float2 texCoords;
+    };
+
+    struct Uniforms
+    {
+        float4x4 projectionMatrix;
+        float4x4 viewMatrix;
+        float4x4 modelMatrix;
+    };
+
+    vertex vs_out vertex_simple(
+        const device vs_in *vertices [[buffer(0)]],
+        constant Uniforms *uniforms  [[buffer(1)]],
+        uint vid [[vertex_id]])
+    {
+        vs_out vertexOut;
+        vertexOut.position = uniforms->projectionMatrix * uniforms->viewMatrix * uniforms->modelMatrix * vertices[vid].position;
+        vertexOut.texCoords = vertices[vid].texCoords;
+        return vertexOut;
+    }
+    
+    fragment float4 fragment_simple(
+        vs_out vert [[stage_in]],
+        texture2d<float, access::sample> tex [[texture(0)]],
+        sampler samplr [[sampler(0)]])
+    {
+        return tex.sample(samplr, vert.texCoords);
+    }
+//#
+)))
+      (let ((pipeline (metalMakePipeline lib "vertex_simple" "fragment_simple")))
+        (set! texture-pipeline pipeline))))
+  
+  
+  ;;;
+  ;;;; Buffers
+  ;;;
+  
+  
+  (method (create-buffers self)
+    (let ((content (f32vector
+                     1.0 0.0 -5.0 1.   0. 0. 0. 0.
+                     3.0 0.0 -5.0 1.   1. 0. 0. 0.
+                     2.0 2.0 -5.0 1.   0. 1. 0. 0.)))
+      (let ((size (f32vector-length content))
+            (stride 8))
+        (set! texture-buffer (metalNewBufferWithBytes content size))
+        (set! texture-vertices (/ size stride)))))
+  
+  
+  ;;;
   ;;;; Resize
   ;;;
   
   
   (method override (resize-scene self width <fl> height <fl>)
-    ;; Viewport
-    (let ((scale-factor (main-screen-scale-factor)))
-      (glViewport 0 0 (* scale-factor (fxround width)) (* scale-factor (fxround height))))
+    (when (opengl? self)
+      ;; Viewport
+      (let ((scale-factor (main-screen-scale-factor)))
+        (glViewport 0 0 (* scale-factor (fxround width)) (* scale-factor (fxround height)))))
     
     ;; Projection
     (let ((ratio (/ width height)))
       (make-perspective-matrix! projection-matrix 53.13 ratio 1.0 30.0))
     
     ;; View
-    (make-view-matrix! view-matrix (vertex 7. 2. 6.) (lookat (vertex -.513 -.110 -.852) (vertex -.056 .994 -.094) (vertex .857 -4.195e-8 -.516))))
+    (make-view-matrix! view-matrix (vertex 7. 2. 6.) (lookat (vertex -.513 -.110 -.852) (vertex -.056 .994 -.094) (vertex .857 -4.195e-8 -.516)))
+    
+    (unless (opengl? self)
+      ;; Uniforms
+      (set! uniform-buffer (let ((content (make-f32vector (* 3 16))))
+                             (define (transfer! offset mat)
+                               (f32vector-set! content (+ offset  0) (matrix-ref mat 0))
+                               (f32vector-set! content (+ offset  1) (matrix-ref mat 1))
+                               (f32vector-set! content (+ offset  2) (matrix-ref mat 2))
+                               (f32vector-set! content (+ offset  3) (matrix-ref mat 3))
+                               (f32vector-set! content (+ offset  4) (matrix-ref mat 4))
+                               (f32vector-set! content (+ offset  5) (matrix-ref mat 5))
+                               (f32vector-set! content (+ offset  6) (matrix-ref mat 6))
+                               (f32vector-set! content (+ offset  7) (matrix-ref mat 7))
+                               (f32vector-set! content (+ offset  8) (matrix-ref mat 8))
+                               (f32vector-set! content (+ offset  9) (matrix-ref mat 9))
+                               (f32vector-set! content (+ offset 10) (matrix-ref mat 10))
+                               (f32vector-set! content (+ offset 11) (matrix-ref mat 11))
+                               (f32vector-set! content (+ offset 12) (matrix-ref mat 12))
+                               (f32vector-set! content (+ offset 13) (matrix-ref mat 13))
+                               (f32vector-set! content (+ offset 14) (matrix-ref mat 14))
+                               (f32vector-set! content (+ offset 15) (matrix-ref mat 15)))
+                             
+                             (transfer!  0 projection-matrix)
+                             (transfer! 16 view-matrix)
+                             (transfer! 32 (make-identity-matrix))
+                             (metalNewBufferWithBytes content (f32vector-length content))))))
   
   
   ;;;
@@ -183,24 +295,47 @@
   
   
   (method override (draw-scene self)
-    ;; Background
-    (glClearColor 0.0 0.0 0.0 0.0)
-    (glClear (bitwise-ior GL_COLOR_BUFFER_BIT GL_DEPTH_BUFFER_BIT))
-    
-    ;; Texture
-    (when (not texture)
-      (set! texture (make-file-cairo-texture {File Home "Media" "Oasis.png"}))
-      (let ((surface (get-surface texture)))
-        (flush surface)
-        (map-texture texture)))
-    
-    ;; Mesh
-    (use mesh-program)
-    (bind-material mesh-program (get-id texture))
-    (bind-uniforms mesh-program projection-matrix view-matrix)
-    (draw-array texture-mesh)
-    (unbind-uniforms mesh-program)
-    (unuse mesh-program)))
+    (platformDrainAutoReleasePool)
+    (if (opengl? self)
+        (begin
+          ;; Background
+          (glClearColor 0.0 0.0 0.0 0.0)
+          (glClear (bitwise-ior GL_COLOR_BUFFER_BIT GL_DEPTH_BUFFER_BIT))
+          
+          ;; Texture
+          (when (not texture)
+            (set! texture (make-file-cairo-texture {File Home "Media" "Oasis.png"}))
+            (let ((surface (get-surface texture)))
+              (flush surface)
+              (map-texture texture)))
+          
+          ;; Mesh
+          (use mesh-program)
+          (bind-material mesh-program (get-id texture))
+          (bind-uniforms mesh-program projection-matrix view-matrix)
+          (draw-array texture-mesh)
+          (unbind-uniforms mesh-program)
+          (unuse mesh-program))
+      ;; Texture
+      (when (not texture)
+        (set! texture (make-file-cairo-metal-texture {File Home "Media" "Oasis.png"})))
+      
+      ;; Render
+      (let ((layer (get-window-layer self)))
+        (let ((drawable (metalLayerNextDrawable layer)))
+          (let ((buffer (metalMakeCommandBuffer))
+                (tex (get-id texture))
+                (sampler (metalNewSamplerState))
+                (pass (metalMakeRenderPassDescriptor drawable)))
+            (let ((encoder (metalMakeRenderCommandEncoder buffer pass)))
+              (metalEncoderSetRenderPipelineState encoder texture-pipeline)
+              (metalEncoderSetVertexBuffer encoder uniform-buffer 1)
+              (metalEncoderSetVertexBuffer encoder texture-buffer 0)
+              (metalEncoderSetFragmentTexture encoder tex 0)
+              (metalEncoderSetFragmentSamplerState encoder sampler 0)
+              (metalEncoderDrawPrimitives encoder texture-vertices)
+              (metalEndPresentCommit drawable buffer encoder)))))
+      (platformDrainAutoReleasePool))))
 
 
 ;;;

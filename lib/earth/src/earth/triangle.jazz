@@ -450,12 +450,11 @@ void main()
               (metalEncoderSetRenderPipelineState encoder color-pipeline)
               (metalEncoderSetVertexBuffer encoder uniform-buffer 1)
               (metalEncoderSetVertexBuffer encoder red-buffer 0)
-              (metalEncoderDrawPrimitives encoder)
+              (metalEncoderDrawPrimitives encoder 3)
               (metalEncoderSetVertexBuffer encoder blue-buffer 0)
-              (metalEncoderDrawPrimitives encoder)
-              (metalEndPresentCommit drawable buffer encoder))
-            @w
-            (metalReleaseCommandBuffer buffer)))))))
+              (metalEncoderDrawPrimitives encoder 3)
+              (metalEndPresentCommit drawable buffer encoder)))))
+      (platformDrainAutoReleasePool))))
 
 
 ;;;

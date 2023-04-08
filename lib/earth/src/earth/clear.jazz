@@ -129,9 +129,8 @@
           (let ((buffer (metalMakeCommandBuffer))
                 (pass (metalMakeRenderPassDescriptorClear drawable 0. 0. 1.)))
             (let ((encoder (metalMakeRenderCommandEncoder buffer pass)))
-              (metalEndPresentCommit drawable buffer encoder))
-            @w
-            (metalReleaseCommandBuffer buffer)))))))
+              (metalEndPresentCommit drawable buffer encoder)))))
+      (platformDrainAutoReleasePool))))
 
 
 ;;;
