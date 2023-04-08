@@ -35,6 +35,11 @@
                          (run earth.model)
                          (build (earth.model executable: "05Model"))
                          (update earth.model))
+            (earth.interface (alias interface)
+                             (title "Interface")
+                             (run earth.interface)
+                             (build (earth.interface executable: "06Interface"))
+                             (update earth.interface))
             (earth (dependencies jazz
                                  jazz.action
                                  jazz.application

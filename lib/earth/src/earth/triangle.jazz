@@ -453,7 +453,9 @@ void main()
               (metalEncoderDrawPrimitives encoder 3)
               (metalEncoderSetVertexBuffer encoder blue-buffer 0)
               (metalEncoderDrawPrimitives encoder 3)
-              (metalEndPresentCommit drawable buffer encoder)))))
+              (metalEndEncoding encoder)
+              (metalPresentDrawable drawable buffer)
+              (metalCommit buffer)))))
       (platformDrainAutoReleasePool))))
 
 

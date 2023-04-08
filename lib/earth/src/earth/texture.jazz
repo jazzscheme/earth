@@ -235,9 +235,9 @@
   
   (method (create-buffers self)
     (let ((content (f32vector
-                     1.0 0.0 -5.0 1.   0. 0. 0. 0.
-                     3.0 0.0 -5.0 1.   1. 0. 0. 0.
-                     2.0 2.0 -5.0 1.   0. 1. 0. 0.)))
+                     4.0 0.5 3.0 1.   1. 1. 0. 0.
+                     6.0 0.5 3.0 1.   0. 0. 0. 0.
+                     5.0 2.5 3.0 1.   1. 0. 0. 0.)))
       (let ((size (f32vector-length content))
             (stride 8))
         (set! texture-buffer (metalNewBufferWithBytes content size))
@@ -295,7 +295,6 @@
   
   
   (method override (draw-scene self)
-    (platformDrainAutoReleasePool)
     (if (opengl? self)
         (begin
           ;; Background
@@ -318,9 +317,10 @@
           (unuse mesh-program))
       ;; Texture
       (when (not texture)
-        (set! texture (make-file-cairo-metal-texture {File Home "Media" "Oasis.png"})))
+        (set! texture (make-file-cairo-metal-texture {File Home "Sexy" "panties.png"})))
       
       ;; Render
+      (metalStartRender)
       (let ((layer (get-window-layer self)))
         (let ((drawable (metalLayerNextDrawable layer)))
           (let ((buffer (metalMakeCommandBuffer))
@@ -334,7 +334,11 @@
               (metalEncoderSetFragmentTexture encoder tex 0)
               (metalEncoderSetFragmentSamplerState encoder sampler 0)
               (metalEncoderDrawPrimitives encoder texture-vertices)
-              (metalEndPresentCommit drawable buffer encoder)))))
+              (metalEndEncoding encoder)
+              (metalPresentDrawable drawable buffer)
+              (metalCommit buffer)))))
+      (metalEndRender)
+      @w
       (platformDrainAutoReleasePool))))
 
 
