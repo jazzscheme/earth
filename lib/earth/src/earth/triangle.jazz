@@ -354,7 +354,7 @@ void main()
     }
 //#
 )))
-      (let ((pipeline (metalMakePipeline lib "vertex_simple" "fragment_simple")))
+      (let ((pipeline (metalMakeRenderPipelineState lib "vertex_simple" "fragment_simple")))
         (set! color-pipeline pipeline))))
   
   
