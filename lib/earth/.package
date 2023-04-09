@@ -60,7 +60,6 @@
                                  jazz.markup
                                  jazz.math
                                  jazz.menu
-                                 jazz.opengl
                                  jazz.preferences
                                  jazz.print
                                  jazz.profile
@@ -82,6 +81,7 @@
                                  gaea
                                  gaea.foreign
                                  gaea.metal
+                                 gaea.opengl
                                  earth.clear
                                  earth.triangle
                                  earth.array
