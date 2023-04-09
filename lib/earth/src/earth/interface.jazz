@@ -53,6 +53,7 @@
         (gaea.mesh)
         (gaea.mesher)
         (gaea.metal)
+        (gaea.metal.geometry)
         (gaea.metal.texture)
         (gaea.program)
         (gaea.program.mesh)
@@ -218,23 +219,7 @@
         uint vid [[vertex_id]])
     {
         vs_out vertexOut;
-        // vertexOut.position = uniforms->orthographicMatrix * vertices[vid].position;
-
-        
-        
-    float2 pixelSpacePosition = vertices[vid].position.xy;
-
-    // Get the viewport size and cast to float.
-    float2 viewportSize = float2(800, 500);
-
-    // To convert from positions in pixel space to positions in clip-space,
-    //  divide the pixel coordinates by half the size of the viewport.
-    // Z is set to 0.0 and w to 1.0 because this is 2D sample.
-    vertexOut.position = vector_float4(0.0, 0.0, 0.0, 1.0);
-    vertexOut.position.xy = pixelSpacePosition / (viewportSize / 2.0);
-    
-    
-        
+        vertexOut.position = uniforms->orthographicMatrix * vertices[vid].position;
         vertexOut.texCoords = vertices[vid].texCoords;
         return vertexOut;
     }
@@ -305,12 +290,12 @@
                                (metalNewBufferWithBytes content (f32vector-length content))))
     ;; Buffer
     (let ((content (f32vector
-                      400. -250. 0. 0.  @w(   0.0 10.0 0.0 1.0)   1.0 1.0 0.0 0.0
-                     -400. -250. 0. 0.  @w(  10.0 10.0 0.0 1.0)   0.0 1.0 0.0 0.0
-                     -400.  250. 0. 0.  @w(   0.0  0.0 0.0 1.0)   0.0 0.0 0.0 0.0
-                      400. -250. 0. 0.  @w(  10.0  0.0 0.0 1.0)   1.0 1.0 0.0 0.0
-                     -400.  250. 0. 0.  @w(   0.0  0.0 0.0 1.0)   0.0 0.0 0.0 0.0
-                      400.  250. 0. 0.  @w(  10.0 10.0 0.0 1.0)   1.0 0.0 0.0 0.0)))
+                      0.0 10.0 0.0 1.0   0.0 0.0 0.0 0.0
+                     10.0 10.0 0.0 1.0   1.0 0.0 0.0 0.0
+                      0.0  0.0 0.0 1.0   0.0 1.0 0.0 0.0
+                     10.0  0.0 0.0 1.0   1.0 1.0 0.0 0.0
+                      0.0  0.0 0.0 1.0   0.0 1.0 0.0 0.0
+                     10.0 10.0 0.0 1.0   1.0 0.0 0.0 0.0)))
       (let ((size (f32vector-length content))
             (stride 8))
         (set! interface-buffer (metalNewBufferWithBytes content size))
@@ -325,13 +310,15 @@
   (method override (resize-scene self width <fl> height <fl>)
     ;; Projection
     (let ((ratio (/ width height)))
-      (make-perspective-matrix! projection-matrix 53.13 ratio 1.0 30.0))
+      (make-perspective-matrix! projection-matrix 53.13 ratio 1.0 30.0)
+      (opengl->metal-projection! projection-matrix))
     
     ;; View
     (make-view-matrix! view-matrix (vertex 7. 2. 6.) (lookat (vertex -.513 -.110 -.852) (vertex -.056 .994 -.094) (vertex .857 -4.195e-8 -.516)))
     
     ;; Orthographic
     (make-orthographic-matrix! orthographic-matrix 0.0 10.0 0.0 10.0 0.0 10.0)
+    (opengl->metal-projection! orthographic-matrix)
     
     ;; Textures
     (when interface-texture
@@ -390,9 +377,7 @@
                 (metalEncoderSetVertexBuffer encoder interface-buffer 0)
                 (metalEncoderSetFragmentTexture encoder tex 0)
                 (metalEncoderSetFragmentSamplerState encoder sampler 0)
-                (metalEncoderDrawPrimitives encoder interface-vertices))
-              @w
-              (metalEndEncoding encoder))
+                (metalEncoderDrawPrimitives encoder interface-vertices)))
             ;; Texture
             (metalEncoderSetRenderPipelineState encoder texture-pipeline)
             (let ((tex (get-id texture))
