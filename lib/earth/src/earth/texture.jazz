@@ -187,8 +187,8 @@
 
     struct vs_in
     {
-        float4 position [[position]];
-        float2 texCoords;
+        float4 position  [[attribute(0)]];
+        float2 texCoords [[attribute(1)]];
     };
 
     struct vs_out
@@ -205,13 +205,12 @@
     };
 
     vertex vs_out vertex_simple(
-        const device vs_in *vertices [[buffer(0)]],
-        constant Uniforms *uniforms  [[buffer(1)]],
-        uint vid [[vertex_id]])
+        vs_in vertexIn [[stage_in]],
+        constant Uniforms *uniforms  [[buffer(1)]])
     {
         vs_out vertexOut;
-        vertexOut.position = uniforms->projectionMatrix * uniforms->viewMatrix * uniforms->modelMatrix * vertices[vid].position;
-        vertexOut.texCoords = vertices[vid].texCoords;
+        vertexOut.position = uniforms->projectionMatrix * uniforms->viewMatrix * uniforms->modelMatrix * vertexIn.position;
+        vertexOut.texCoords = vertexIn.texCoords;
         return vertexOut;
     }
     
@@ -226,8 +225,8 @@
 ))
           (desc (metalMakeVertexDescriptor)))
       (metalVertexDescriptorAttribute desc 0 MTLVertexFormatFloat4 0 0)
-      (metalVertexDescriptorAttribute desc 1 MTLVertexFormatFloat2 (* 2 float-size) 0)
-      (metalVertexDescriptorLayout desc 0 MTLVertexStepFunctionPerVertex 8)
+      (metalVertexDescriptorAttribute desc 1 MTLVertexFormatFloat2 (* 4 float-size) 0)
+      (metalVertexDescriptorLayout desc 0 MTLVertexStepFunctionPerVertex (* 8 float-size))
       (let ((pipeline (metalMakeRenderPipelineState lib "vertex_simple" "fragment_simple" desc)))
         (set! texture-pipeline pipeline))))
   

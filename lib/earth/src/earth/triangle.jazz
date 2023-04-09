@@ -319,8 +319,8 @@ void main()
 
     struct vs_in
     {
-        float4 position [[position]];
-        float4 color;
+        float4 position [[attribute(0)]];
+        float4 color    [[attribute(1)]];
     };
 
     struct vs_out
@@ -337,13 +337,12 @@ void main()
     };
 
     vertex vs_out vertex_simple(
-        const device vs_in *vertices [[buffer(0)]],
-        constant Uniforms *uniforms  [[buffer(1)]],
-        uint vid [[vertex_id]])
+        vs_in vertexIn [[stage_in]],
+        constant Uniforms *uniforms  [[buffer(1)]])
     {
         vs_out vertexOut;
-        vertexOut.position = uniforms->projectionMatrix * uniforms->viewMatrix * uniforms->modelMatrix * vertices[vid].position;
-        vertexOut.color = vertices[vid].color;
+        vertexOut.position = uniforms->projectionMatrix * uniforms->viewMatrix * uniforms->modelMatrix * vertexIn.position;
+        vertexOut.color = vertexIn.color;
         return vertexOut;
     }
     
@@ -353,8 +352,12 @@ void main()
         return vert.color;
     }
 //#
-)))
-      (let ((pipeline (metalMakeRenderPipelineState lib "vertex_simple" "fragment_simple")))
+))
+          (desc (metalMakeVertexDescriptor)))
+      (metalVertexDescriptorAttribute desc 0 MTLVertexFormatFloat4 0 0)
+      (metalVertexDescriptorAttribute desc 1 MTLVertexFormatFloat2 (* 4 float-size) 0)
+      (metalVertexDescriptorLayout desc 0 MTLVertexStepFunctionPerVertex (* 8 float-size))
+      (let ((pipeline (metalMakeRenderPipelineState lib "vertex_simple" "fragment_simple" desc)))
         (set! color-pipeline pipeline))))
   
   
