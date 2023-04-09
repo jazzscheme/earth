@@ -109,6 +109,8 @@
   
   
   (method override (setup-engine self)
+    ;; quicky until crashes fixed
+    (platformInhibitAutoReleasePool)
     (init-fonts)
     (create-pipelines self)
     (create-buffers self)
@@ -260,12 +262,11 @@
   
   (method (setup-textures self)
     ;; Texture
-    (when (not interface-texture)
     (set! interface-texture (make-cairo-metal-texture (get-width self) (get-height self) scale?: #f))
     (fill-rect (get-surface interface-texture) {Rect 100 100 700 400} {Color Blue})
     (set-font (get-surface interface-texture) {Font font-name: tahoma point-size: 22.5})
     (draw-text (get-surface interface-texture) 110 110 "Hello Metal!" {Color Yellow})
-    (yoreplace interface-texture))
+    (map-texture interface-texture)
     ;; Uniforms
     (set! interface-uniforms (let ((content (make-f32vector 16)))
                                (define (transfer! offset mat)
