@@ -263,9 +263,9 @@
   (method (setup-textures self)
     ;; Texture
     (set! interface-texture (make-cairo-metal-texture (get-width self) (get-height self) scale?: #t))
-    (fill-rect (get-surface interface-texture) {Rect 100 100 700 400} {Color Blue})
+    (fill-rect (get-surface interface-texture) (new Rect 0 0 (get-width self) (get-height self)) {Color Blue})
     (set-font (get-surface interface-texture) {Font font-name: tahoma point-size: 22.5})
-    (draw-text (get-surface interface-texture) 110 110 "Hello Metal!" {Color Yellow})
+    (draw-text (get-surface interface-texture) 25 25 "Hello Metal!" {Color Yellow})
     (map-texture interface-texture)
     ;; Uniforms
     (set! interface-uniforms (let ((content (make-f32vector 16)))
