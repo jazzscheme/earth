@@ -223,8 +223,12 @@
         return tex.sample(samplr, vert.texCoords);
     }
 //#
-)))
-      (let ((pipeline (metalMakeRenderPipelineState lib "vertex_simple" "fragment_simple")))
+))
+          (desc (metalMakeVertexDescriptor)))
+      (metalVertexDescriptorAttribute desc 0 MTLVertexFormatFloat4 0 0)
+      (metalVertexDescriptorAttribute desc 1 MTLVertexFormatFloat2 (* 2 float-size) 0)
+      (metalVertexDescriptorLayout desc 0 MTLVertexStepFunctionPerVertex 8)
+      (let ((pipeline (metalMakeRenderPipelineState lib "vertex_simple" "fragment_simple" desc)))
         (set! texture-pipeline pipeline))))
   
   
@@ -317,7 +321,7 @@
           (unuse mesh-program))
       ;; Texture
       (when (not texture)
-        (set! texture (make-file-cairo-metal-texture {File Home "Sexy" "panties.png"})))
+        (set! texture (make-file-cairo-metal-texture {File Home "Media" "Oasis.png"})))
       
       ;; Render
       (metalStartRender)
@@ -337,9 +341,7 @@
               (metalEndEncoding encoder)
               (metalPresentDrawable drawable buffer)
               (metalCommit buffer)))))
-      (metalEndRender)
-      @w
-      (platformDrainAutoReleasePool))))
+      (metalEndRender))))
 
 
 ;;;

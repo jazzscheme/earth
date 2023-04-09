@@ -49,8 +49,6 @@
         (gaea.buffer)
         (gaea.generate)
         (gaea.geometry)
-        (gaea.opengl)
-        (gaea.opengl.glew)
         (gaea.program)
         (gaea.program.color)
         (gaea.shader)
@@ -157,9 +155,7 @@
   
   
   (method override (resize-scene self width <fl> height <fl>)
-    ;; Viewport
-    (let ((scale-factor (main-screen-scale-factor)))
-      (glViewport 0 0 (* scale-factor (fxround width)) (* scale-factor (fxround height))))
+    (nextmethod self width height)
     
     ;; Projection
     (let ((ratio (/ width height)))
@@ -175,10 +171,6 @@
   
   
   (method override (draw-scene self)
-    ;; Background
-    (glClearColor 0.0 0.0 0.0 0.0)
-    (glClear (bitwise-ior GL_COLOR_BUFFER_BIT GL_DEPTH_BUFFER_BIT))
-    
     ;; Color
     (use color-program)
     (bind-uniforms color-program projection-matrix view-matrix)

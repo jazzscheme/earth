@@ -131,8 +131,7 @@
             (let ((encoder (metalMakeRenderCommandEncoder buffer pass)))
               (metalEndEncoding encoder)
               (metalPresentDrawable drawable buffer)
-              (metalCommit buffer)))))
-      (platformDrainAutoReleasePool))))
+              (metalCommit buffer))))))))
 
 
 ;;;

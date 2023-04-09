@@ -455,8 +455,7 @@ void main()
               (metalEncoderDrawPrimitives encoder 3)
               (metalEndEncoding encoder)
               (metalPresentDrawable drawable buffer)
-              (metalCommit buffer)))))
-      (platformDrainAutoReleasePool))))
+              (metalCommit buffer))))))))
 
 
 ;;;
