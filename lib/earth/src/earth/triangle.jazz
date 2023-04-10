@@ -173,7 +173,22 @@ void main()
   (slot array getter generate))
 
 
-(class Color-Array extends Array
+(class Red-Array extends Array
+  
+  
+  (slot vertex-buffer)
+  (slot color-buffer)
+  
+  
+  (method override (initialize self program vertices colors)
+    (set! array (glGenVertexArrays*))
+    (glBindVertexArray array)
+    (set! vertex-buffer (create-vertex-buffer program vertices))
+    (set! color-buffer (create-color-buffer program colors))
+    (glBindVertexArray 0)))
+
+
+(class Blue-Array extends Array
   
   
   (slot vertex-buffer)
@@ -292,7 +307,7 @@ void main()
           (colors #f32( 1.0 0.0 0.0
                         1.0 0.0 0.0
                         1.0 0.0 0.0)))
-      (new Color-Array color-program vertices colors)))
+      (new Red-Array color-program vertices colors)))
   
   
   (method (create-blue self)
@@ -302,7 +317,7 @@ void main()
           (colors #f32( 0.0 0.0 1.0
                         0.0 0.0 1.0
                         0.0 0.0 1.0)))
-      (new Color-Array color-program vertices colors)))
+      (new Blue-Array color-program vertices colors)))
   
   
   ;;;
