@@ -105,10 +105,6 @@ void main()
 (class Color-Program extends Program
   
   
-  ;; Attribute Locations
-  (slot vertex-attribute          initialize #f getter generate)
-  (slot color-attribute           initialize #f getter generate)
- 
   ;; Uniform Locations
   (slot projection_matrix-uniform initialize #f getter generate)
   (slot view_matrix-uniform       initialize #f getter generate)
@@ -118,8 +114,6 @@ void main()
     (set-vs self (create-vertex-shader self))
     (set-fs self (create-fragment-shader self))
     (link self)
-    (set! vertex-attribute (add-attribute self "position"))
-    (set! color-attribute (add-attribute self "color"))
     (set! projection_matrix-uniform (add-uniform self "projection_matrix"))
     (set! view_matrix-uniform (add-uniform self "view_matrix")))
   
@@ -129,38 +123,6 @@ void main()
   
   (method override (create-fragment-shader self)
     color-frag)
-  
-  
-  (method package (create-vertex-buffer self vertices)
-    (let ((vbo (glGenBuffers*)))
-      (glBindBuffer GL_ARRAY_BUFFER vbo)
-      (glBufferDataFloat* GL_ARRAY_BUFFER (f32vector-length vertices) vertices GL_STATIC_DRAW)
-      (glEnableVertexAttribArray vertex-attribute)
-      (glVertexAttribPointer* vertex-attribute 3 GL_FLOAT GL_FALSE (* 3 float-size) 0)
-      (glBindBuffer GL_ARRAY_BUFFER 0)
-      vbo))
-  
-  
-  (method package (create-vertex-buffer2 self vertices)
-    (let ((vbo (glGenBuffers*)))
-      (glBindBuffer GL_ARRAY_BUFFER vbo)
-      (glBufferDataFloat* GL_ARRAY_BUFFER (f32vector-length vertices) vertices GL_STATIC_DRAW)
-      (glEnableVertexAttribArray vertex-attribute)
-      (glVertexAttribPointer* vertex-attribute 3 GL_FLOAT GL_FALSE (* 6 float-size) 0)
-      (glEnableVertexAttribArray color-attribute)
-      (glVertexAttribPointer* color-attribute 3 GL_FLOAT GL_FALSE (* 6 float-size) (* 3 float-size))
-      (glBindBuffer GL_ARRAY_BUFFER 0)
-      vbo))
-  
-  
-  (method package (create-color-buffer self colors)
-    (let ((vbo (glGenBuffers*)))
-      (glBindBuffer GL_ARRAY_BUFFER vbo)
-      (glBufferDataFloat* GL_ARRAY_BUFFER (f32vector-length colors) colors GL_STATIC_DRAW)
-      (glEnableVertexAttribArray color-attribute)
-      (glVertexAttribPointer* color-attribute 3 GL_FLOAT GL_FALSE (* 3 float-size) 0)
-      (glBindBuffer GL_ARRAY_BUFFER 0)
-      vbo))
   
   
   (method package (bind-uniforms self projection-matrix view-matrix)
@@ -189,8 +151,22 @@ void main()
   (method override (initialize self program vertices colors)
     (set! array (glGenVertexArrays*))
     (glBindVertexArray array)
-    (set! vertex-buffer (create-vertex-buffer program vertices))
-    (set! color-buffer (create-color-buffer program colors))
+    (let ((vbo (glGenBuffers*))
+          (vertex-attribute (get-attribute program "position")))
+      (glBindBuffer GL_ARRAY_BUFFER vbo)
+      (glBufferDataFloat* GL_ARRAY_BUFFER (f32vector-length vertices) vertices GL_STATIC_DRAW)
+      (glEnableVertexAttribArray vertex-attribute)
+      (glVertexAttribPointer* vertex-attribute 3 GL_FLOAT GL_FALSE (* 3 float-size) 0)
+      (glBindBuffer GL_ARRAY_BUFFER 0)
+      (set! vertex-buffer vbo))
+    (let ((vbo (glGenBuffers*))
+          (color-attribute (get-attribute program "color")))
+      (glBindBuffer GL_ARRAY_BUFFER vbo)
+      (glBufferDataFloat* GL_ARRAY_BUFFER (f32vector-length colors) colors GL_STATIC_DRAW)
+      (glEnableVertexAttribArray color-attribute)
+      (glVertexAttribPointer* color-attribute 3 GL_FLOAT GL_FALSE (* 3 float-size) 0)
+      (glBindBuffer GL_ARRAY_BUFFER 0)
+      (set! color-buffer vbo))
     (glBindVertexArray 0)))
 
 
@@ -198,13 +174,22 @@ void main()
   
   
   (slot vertex-buffer)
-  (slot color-buffer)
   
   
   (method override (initialize self program vertices)
     (set! array (glGenVertexArrays*))
     (glBindVertexArray array)
-    (set! vertex-buffer (create-vertex-buffer2 program vertices))
+    (let ((vbo (glGenBuffers*))
+          (vertex-attribute (get-attribute program "position"))
+          (color-attribute (get-attribute program "color")))
+      (glBindBuffer GL_ARRAY_BUFFER vbo)
+      (glBufferDataFloat* GL_ARRAY_BUFFER (f32vector-length vertices) vertices GL_STATIC_DRAW)
+      (glEnableVertexAttribArray vertex-attribute)
+      (glVertexAttribPointer* vertex-attribute 3 GL_FLOAT GL_FALSE (* 6 float-size) 0)
+      (glEnableVertexAttribArray color-attribute)
+      (glVertexAttribPointer* color-attribute 3 GL_FLOAT GL_FALSE (* 6 float-size) (* 3 float-size))
+      (glBindBuffer GL_ARRAY_BUFFER 0)
+      (set! vertex-buffer vbo))
     (glBindVertexArray 0)))
 
 
