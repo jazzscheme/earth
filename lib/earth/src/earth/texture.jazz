@@ -47,6 +47,7 @@
         (jazz.screen)
         (gaea.array)
         (gaea.buffer)
+        (gaea.engine)
         (gaea.engine.metal)
         (gaea.generate)
         (gaea.geometry)
@@ -108,7 +109,7 @@
   
   
   (method override (setup-engine self)
-    (if (opengl? self)
+    (if (opengl?)
         (begin
           (setup-programs self)
           (initialize-meshes self))
@@ -253,7 +254,7 @@
   
   
   (method override (resize-scene self width <fl> height <fl>)
-    (when (opengl? self)
+    (when (opengl?)
       ;; Viewport
       (let ((scale-factor (main-screen-scale-factor)))
         (glViewport 0 0 (* scale-factor (fxround width)) (* scale-factor (fxround height)))))
@@ -265,7 +266,7 @@
     ;; View
     (make-view-matrix! view-matrix (vertex 7. 2. 6.) (lookat (vertex -.513 -.110 -.852) (vertex -.056 .994 -.094) (vertex .857 -4.195e-8 -.516)))
     
-    (unless (opengl? self)
+    (unless (opengl?)
       ;; Uniforms
       (set! uniform-buffer (let ((content (make-f32vector (* 3 16))))
                              (define (transfer! offset mat)
@@ -298,7 +299,7 @@
   
   
   (method override (draw-scene self)
-    (if (opengl? self)
+    (if (opengl?)
         (begin
           ;; Background
           (glClearColor 0.0 0.0 0.0 0.0)

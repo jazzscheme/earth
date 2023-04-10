@@ -45,6 +45,7 @@
         (jazz.platform)
         (jazz.process)
         (jazz.screen)
+        (gaea.engine)
         (gaea.engine.metal)
         (gaea.geometry)
         (gaea.metal)
@@ -107,7 +108,7 @@
   
   
   (method override (resize-scene self width <fl> height <fl>)
-    (when (opengl? self)
+    (when (opengl?)
       ;; Viewport
       (let ((scale-factor (main-screen-scale-factor)))
         (glViewport 0 0 (* scale-factor (fxround width)) (* scale-factor (fxround height))))))
@@ -119,7 +120,7 @@
   
   
   (method override (draw-scene self)
-    (if (opengl? self)
+    (if (opengl?)
         (begin
           ;; Background
           (glClearColor 0.0 0.0 1.0 0.0)

@@ -45,6 +45,7 @@
         (jazz.platform)
         (jazz.process)
         (jazz.screen)
+        (gaea.engine)
         (gaea.engine.metal)
         (gaea.geometry)
         (gaea.metal)
@@ -231,7 +232,7 @@ void main()
   
   
   (method override (setup-engine self)
-    (if (opengl? self)
+    (if (opengl?)
         (begin
           (create-programs self)
           (initialize-arrays self))
@@ -355,7 +356,7 @@ void main()
 ))
           (desc (metalMakeVertexDescriptor)))
       (metalVertexDescriptorAttribute desc 0 MTLVertexFormatFloat4 0 0)
-      (metalVertexDescriptorAttribute desc 1 MTLVertexFormatFloat2 (* 4 float-size) 0)
+      (metalVertexDescriptorAttribute desc 1 MTLVertexFormatFloat4 (* 4 float-size) 0)
       (metalVertexDescriptorLayout desc 0 MTLVertexStepFunctionPerVertex (* 8 float-size))
       (let ((pipeline (metalMakeRenderPipelineState lib "vertex_simple" "fragment_simple" desc)))
         (set! color-pipeline pipeline))))
@@ -385,7 +386,7 @@ void main()
   
   
   (method override (resize-scene self width <fl> height <fl>)
-    (when (opengl? self)
+    (when (opengl?)
       ;; Viewport
       (let ((scale-factor (main-screen-scale-factor)))
         (glViewport 0 0 (* scale-factor (fxround width)) (* scale-factor (fxround height)))))
@@ -397,7 +398,7 @@ void main()
     ;; View
     (make-view-matrix! view-matrix (vertex 7. 2. 6.) (lookat (vertex -.513 -.110 -.852) (vertex -.056 .994 -.094) (vertex .857 -4.195e-8 -.516)))
     
-    (unless (opengl? self)
+    (unless (opengl?)
       ;; Uniforms
       (set! uniform-buffer (let ((content (make-f32vector (* 3 16))))
                              (define (transfer! offset mat)
@@ -430,7 +431,7 @@ void main()
   
   
   (method override (draw-scene self)
-    (if (opengl? self)
+    (if (opengl?)
         (begin
           ;; Background
           (glClearColor 0.0 0.0 0.0 0.0)

@@ -49,8 +49,8 @@
         (gaea.buffer)
         (gaea.generate)
         (gaea.geometry)
-        (gaea.program)
-        (gaea.program.color)
+        (gaea.pipeline)
+        (gaea.pipeline.color)
         (gaea.shader)
         (gaea.window))
 
@@ -67,8 +67,8 @@
     (<install> caption-base: "Pipeline"))
   
   
-  ;; Programs
-  (slot color-program       initialize #f getter generate)
+  ;; Pipelines
+  (slot color-pipeline      initialize #f getter generate)
   
   ;; Arrays
   (slot blue-array          initialize #f getter generate)
@@ -88,13 +88,13 @@
   
   
   (method override (setup-engine self)
-    (setup-programs self)
+    (setup-pipelines self)
     (initialize-arrays self)
     (start-render self))
   
   
-  (method (setup-programs self)
-    (set! color-program (require-program 'color)))
+  (method (setup-pipelines self)
+    (set! color-pipeline (require-pipeline 'color)))
   
   
   (method (start-render self)
@@ -128,7 +128,7 @@
       (let ((array (new Color-Array)))
         (allocate-vertices array)
         (set-data (get-vertices-buffer array) data color-triangle-floats color-vertex-floats)
-        (setup-array array color-program)
+        (setup-array array color-pipeline)
         array))
     
     (set! red-array (create-red self array-generate))
@@ -172,12 +172,12 @@
   
   (method override (draw-scene self)
     ;; Color
-    (use color-program)
-    (bind-uniforms color-program projection-matrix view-matrix)
+    (use color-pipeline)
+    (bind-uniforms color-pipeline projection-matrix view-matrix)
     (draw-array red-array)
     (draw-array blue-array)
-    (unbind-uniforms color-program)
-    (unuse color-program)))
+    (unbind-uniforms color-pipeline)
+    (unuse color-pipeline)))
 
 
 ;;;
