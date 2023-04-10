@@ -314,7 +314,6 @@ void main()
   
   
   (method (create-pipelines self)
-    ;; Red
     (let ((lib (metalMakeLibrary
 #/C/
     #include <metal_stdlib>
@@ -356,64 +355,23 @@ void main()
         return vert.color;
     }
 //#
-))
-          (desc (metalMakeVertexDescriptor)))
-      (metalVertexDescriptorAttribute desc 0 MTLVertexFormatFloat4 0 1)
-      (metalVertexDescriptorAttribute desc 1 MTLVertexFormatFloat4 0 2)
-      (metalVertexDescriptorLayout desc 1 MTLVertexStepFunctionPerVertex (* 4 float-size))
-      (metalVertexDescriptorLayout desc 2 MTLVertexStepFunctionPerVertex (* 4 float-size))
-      (let ((pipeline (metalMakeRenderPipelineState lib "vertex_simple" "fragment_simple" desc)))
-        (set! red-pipeline pipeline)))
-    
-    ;; Blue
-    (let ((lib (metalMakeLibrary
-#/C/
-    #include <metal_stdlib>
-    
-    using namespace metal;
-
-    struct vs_in
-    {
-        float4 position [[attribute(0)]];
-        float4 color    [[attribute(1)]];
-    };
-
-    struct vs_out
-    {
-        float4 position [[position]];
-        float4 color;
-    };
-
-    struct Uniforms
-    {
-        float4x4 projectionMatrix;
-        float4x4 viewMatrix;
-        float4x4 modelMatrix;
-    };
-
-    vertex vs_out vertex_simple(
-        vs_in vertexIn [[stage_in]],
-        constant Uniforms *uniforms  [[buffer(0)]])
-    {
-        vs_out vertexOut;
-        vertexOut.position = uniforms->projectionMatrix * uniforms->viewMatrix * uniforms->modelMatrix * vertexIn.position;
-        vertexOut.color = vertexIn.color;
-        return vertexOut;
-    }
-    
-    fragment float4 fragment_simple(
-        vs_out vert [[stage_in]])
-    {
-        return vert.color;
-    }
-//#
-))
-          (desc (metalMakeVertexDescriptor)))
-      (metalVertexDescriptorAttribute desc 0 MTLVertexFormatFloat4 0 1)
-      (metalVertexDescriptorAttribute desc 1 MTLVertexFormatFloat4 (* 4 float-size) 1)
-      (metalVertexDescriptorLayout desc 1 MTLVertexStepFunctionPerVertex (* 8 float-size))
-      (let ((pipeline (metalMakeRenderPipelineState lib "vertex_simple" "fragment_simple" desc)))
-        (set! blue-pipeline pipeline))))
+)))
+      ;; Red
+      (let ((desc (metalMakeVertexDescriptor)))
+        (metalVertexDescriptorAttribute desc 0 MTLVertexFormatFloat4 0 1)
+        (metalVertexDescriptorAttribute desc 1 MTLVertexFormatFloat4 0 2)
+        (metalVertexDescriptorLayout desc 1 MTLVertexStepFunctionPerVertex (* 4 float-size))
+        (metalVertexDescriptorLayout desc 2 MTLVertexStepFunctionPerVertex (* 4 float-size))
+        (let ((pipeline (metalMakeRenderPipelineState lib "vertex_simple" "fragment_simple" desc)))
+          (set! red-pipeline pipeline)))
+      
+      ;; Blue
+      (let ((desc (metalMakeVertexDescriptor)))
+        (metalVertexDescriptorAttribute desc 0 MTLVertexFormatFloat4 0 1)
+        (metalVertexDescriptorAttribute desc 1 MTLVertexFormatFloat4 (* 4 float-size) 1)
+        (metalVertexDescriptorLayout desc 1 MTLVertexStepFunctionPerVertex (* 8 float-size))
+        (let ((pipeline (metalMakeRenderPipelineState lib "vertex_simple" "fragment_simple" desc)))
+          (set! blue-pipeline pipeline)))))
   
   
   ;;;
