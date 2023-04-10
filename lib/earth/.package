@@ -15,11 +15,11 @@
                             (run earth.triangle)
                             (build (earth.triangle executable: "01Triangle"))
                             (update earth.triangle))
-            (earth.array (alias array)
-                         (title "Array")
-                         (run earth.array)
-                         (build (earth.array executable: "02Array"))
-                         (update earth.array))
+            (earth.pipeline (alias pipeline)
+                            (title "Pipeline")
+                            (run earth.pipeline)
+                            (build (earth.pipeline executable: "02Pipeline"))
+                            (update earth.pipeline))
             (earth.mesh (alias mesh)
                         (title "Mesh")
                         (run earth.mesh)
@@ -84,7 +84,7 @@
                                  gaea.opengl
                                  earth.clear
                                  earth.triangle
-                                 earth.array
+                                 earth.pipeline
                                  earth.mesh
                                  earth.texture
                                  earth.model)))

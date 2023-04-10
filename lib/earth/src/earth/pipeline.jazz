@@ -2,7 +2,7 @@
 ;;;  GaeaScheme
 ;;;==============
 ;;;
-;;;; Earth Array
+;;;; Earth Pipeline
 ;;;
 ;;;  The contents of this file are subject to the Mozilla Public License Version
 ;;;  1.1 (the "License"); you may not use this file except in compliance with
@@ -35,7 +35,7 @@
 ;;;  See www.jazzscheme.org for details.
 
 
-(module earth.array jazz
+(module earth.pipeline jazz
 
 
 (import (jazz.application)
@@ -60,11 +60,11 @@
 ;;;
 
 
-(class Array-Window extends Gaea-Window
+(class Pipeline-Window extends Gaea-Window
   
   
   (form
-    (<install> caption-base: "Array"))
+    (<install> caption-base: "Pipeline"))
   
   
   ;; Programs
@@ -185,11 +185,11 @@
 ;;;
 
 
-(class Array-Application extends Application
+(class Pipeline-Application extends Application
   
   
   (method override (new-toplevel self)
-    (new Array-Window position: {Point 200 150} size: {Dimension 800 500})))
+    (new Pipeline-Window position: {Point 200 150} size: {Dimension 800 500})))
 
 
 ;;;
@@ -197,9 +197,9 @@
 ;;;
 
 
-(definition (run-array descriptor)
-  (boot-environment (new Array-Application)))
+(definition (run-pipeline descriptor)
+  (boot-environment (new Pipeline-Application)))
 
 
-(register-product-run 'earth.array
-  run-array))
+(register-product-run 'earth.pipeline
+  run-pipeline))
