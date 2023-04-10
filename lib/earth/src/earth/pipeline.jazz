@@ -47,10 +47,13 @@
         (jazz.screen)
         (gaea.array)
         (gaea.buffer)
+        (gaea.engine)
         (gaea.generate)
         (gaea.geometry)
         (gaea.pipeline)
         (gaea.pipeline.color)
+        (gaea.program)
+        (gaea.program.color)
         (gaea.shader)
         (gaea.window))
 
@@ -71,8 +74,8 @@
   (slot color-pipeline      initialize #f getter generate)
   
   ;; Arrays
-  (slot blue-array          initialize #f getter generate)
   (slot red-array           initialize #f getter generate)
+  (slot blue-array          initialize #f getter generate)
   
   ;; Matrices
   (slot projection-matrix   initialize (make-matrix) getter generate)
@@ -89,7 +92,8 @@
   
   (method override (setup-engine self)
     (setup-pipelines self)
-    (initialize-arrays self)
+    (when (opengl?)
+      (initialize-arrays self))
     (start-render self))
   
   
@@ -172,12 +176,28 @@
   
   (method override (draw-scene self)
     ;; Color
-    (use color-pipeline)
-    (bind-uniforms color-pipeline projection-matrix view-matrix)
-    (draw-array red-array)
-    (draw-array blue-array)
-    (unbind-uniforms color-pipeline)
-    (unuse color-pipeline)))
+    (if (opengl?)
+        (begin
+          (use color-pipeline)
+          (bind-uniforms color-pipeline projection-matrix view-matrix)
+          (draw-array red-array)
+          (draw-array blue-array)
+          (unbind-uniforms color-pipeline)
+          (unuse color-pipeline))
+      (let ((layer (get-window-layer self)))
+        (let ((drawable (metalLayerNextDrawable layer)))
+          (let ((buffer (metalMakeCommandBuffer))
+                (pass (metalMakeRenderPassDescriptor drawable)))
+            (let ((encoder (metalMakeRenderCommandEncoder buffer pass)))
+              (metalEncoderSetRenderPipelineState encoder color-pipeline)
+              (metalEncoderSetVertexBuffer encoder uniform-buffer 0)
+              (metalEncoderSetVertexBuffer encoder red-buffer 1)
+              (metalEncoderDrawPrimitives encoder 3)
+              (metalEncoderSetVertexBuffer encoder blue-buffer 1)
+              (metalEncoderDrawPrimitives encoder 3)
+              (metalEndEncoding encoder)
+              (metalPresentDrawable drawable buffer)
+              (metalCommit buffer))))))))
 
 
 ;;;

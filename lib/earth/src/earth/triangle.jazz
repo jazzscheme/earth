@@ -68,7 +68,6 @@ uniform mat4 view_matrix, projection_matrix;
 
 in vec3 position;
 in vec3 color;
-in vec3 normal;
 
 out vec4 out1;
 out vec4 out2;
@@ -80,7 +79,7 @@ out vec3 final_color;
 void main()
 {
     gl_Position = projection_matrix * view_matrix * vec4(position, 1.0);
-    final_color = vec3(color.x, color.y, color.z * normal.z);
+    final_color = vec3(color.x, color.y, color.z);
     out1 = vec4(position, 1.0);
     out2 = gl_Position;
     out3 = vec4(final_color, 1.0);
@@ -108,7 +107,6 @@ void main()
   
   ;; Attribute Locations
   (slot vertex-attribute          initialize #f getter generate)
-  (slot normal-attribute          initialize #f getter generate)
   (slot color-attribute           initialize #f getter generate)
  
   ;; Uniform Locations
@@ -121,7 +119,6 @@ void main()
     (set-fs self (create-fragment-shader self))
     (link self)
     (set! vertex-attribute (add-attribute self "position"))
-    (set! normal-attribute (add-attribute self "normal"))
     (set! color-attribute (add-attribute self "color"))
     (set! projection_matrix-uniform (add-uniform self "projection_matrix"))
     (set! view_matrix-uniform (add-uniform self "view_matrix")))
@@ -139,9 +136,9 @@ void main()
       (glBindBuffer GL_ARRAY_BUFFER vbo)
       (glBufferDataFloat* GL_ARRAY_BUFFER (f32vector-length vertices) vertices GL_STATIC_DRAW)
       (glEnableVertexAttribArray vertex-attribute)
-      (glVertexAttribPointer* vertex-attribute 3 GL_FLOAT GL_FALSE (* 6 float-size) 0)
-      (glEnableVertexAttribArray normal-attribute)
-      (glVertexAttribPointer* normal-attribute 3 GL_FLOAT GL_FALSE (* 6 float-size) (* 3 float-size))
+      (glVertexAttribPointer* vertex-attribute 3 GL_FLOAT GL_FALSE (* 3 float-size) 0)
+      ;(glEnableVertexAttribArray normal-attribute)
+      ;(glVertexAttribPointer* normal-attribute 3 GL_FLOAT GL_FALSE (* 6 float-size) (* 3 float-size))
       (glBindBuffer GL_ARRAY_BUFFER 0)
       vbo))
   
@@ -289,9 +286,9 @@ void main()
   
   
   (method (create-red self)
-    (let ((vertices #f32( 1.0 0.0 -5.0 0. 0. 1.
-                          3.0 0.0 -5.0 0. 0. 1.
-                          2.0 2.0 -5.0 0. 0. 1.))
+    (let ((vertices #f32( 1.0 0.0 -5.0
+                          3.0 0.0 -5.0
+                          2.0 2.0 -5.0))
           (colors #f32( 1.0 0.0 0.0
                         1.0 0.0 0.0
                         1.0 0.0 0.0)))
@@ -299,9 +296,9 @@ void main()
   
   
   (method (create-blue self)
-    (let ((vertices #f32( -3.0 0.0 -5.0 0. 0. 1.
-                          -1.0 0.0 -5.0 0. 0. 1.
-                          -2.0 2.0 -5.0 0. 0. 1.))
+    (let ((vertices #f32( -3.0 0.0 -5.0
+                          -1.0 0.0 -5.0
+                          -2.0 2.0 -5.0))
           (colors #f32( 0.0 0.0 1.0
                         0.0 0.0 1.0
                         0.0 0.0 1.0)))
