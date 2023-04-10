@@ -137,8 +137,18 @@ void main()
       (glBufferDataFloat* GL_ARRAY_BUFFER (f32vector-length vertices) vertices GL_STATIC_DRAW)
       (glEnableVertexAttribArray vertex-attribute)
       (glVertexAttribPointer* vertex-attribute 3 GL_FLOAT GL_FALSE (* 3 float-size) 0)
-      ;(glEnableVertexAttribArray normal-attribute)
-      ;(glVertexAttribPointer* normal-attribute 3 GL_FLOAT GL_FALSE (* 6 float-size) (* 3 float-size))
+      (glBindBuffer GL_ARRAY_BUFFER 0)
+      vbo))
+  
+  
+  (method package (create-vertex-buffer2 self vertices)
+    (let ((vbo (glGenBuffers*)))
+      (glBindBuffer GL_ARRAY_BUFFER vbo)
+      (glBufferDataFloat* GL_ARRAY_BUFFER (f32vector-length vertices) vertices GL_STATIC_DRAW)
+      (glEnableVertexAttribArray vertex-attribute)
+      (glVertexAttribPointer* vertex-attribute 3 GL_FLOAT GL_FALSE (* 6 float-size) 0)
+      (glEnableVertexAttribArray color-attribute)
+      (glVertexAttribPointer* color-attribute 3 GL_FLOAT GL_FALSE (* 6 float-size) (* 3 float-size))
       (glBindBuffer GL_ARRAY_BUFFER 0)
       vbo))
   
@@ -155,11 +165,7 @@ void main()
   
   (method package (bind-uniforms self projection-matrix view-matrix)
     (glUniformMatrix4dv* projection_matrix-uniform 1 #f projection-matrix)
-    (glUniformMatrix4dv* view_matrix-uniform 1 #f view-matrix))
-  
-  
-  (method package (unbind-uniforms self)
-    ))
+    (glUniformMatrix4dv* view_matrix-uniform 1 #f view-matrix)))
 
 
 ;;;
@@ -195,11 +201,10 @@ void main()
   (slot color-buffer)
   
   
-  (method override (initialize self program vertices colors)
+  (method override (initialize self program vertices)
     (set! array (glGenVertexArrays*))
     (glBindVertexArray array)
-    (set! vertex-buffer (create-vertex-buffer program vertices))
-    (set! color-buffer (create-color-buffer program colors))
+    (set! vertex-buffer (create-vertex-buffer2 program vertices))
     (glBindVertexArray 0)))
 
 
@@ -311,13 +316,10 @@ void main()
   
   
   (method (create-blue self)
-    (let ((vertices #f32( -3.0 0.0 -5.0
-                          -1.0 0.0 -5.0
-                          -2.0 2.0 -5.0))
-          (colors #f32( 0.0 0.0 1.0
-                        0.0 0.0 1.0
-                        0.0 0.0 1.0)))
-      (new Blue-Array color-program vertices colors)))
+    (let ((vertices #f32( -3.0 0.0 -5.0   0.0 0.0 1.0
+                          -1.0 0.0 -5.0   0.0 0.0 1.0
+                          -2.0 2.0 -5.0   0.0 0.0 1.0)))
+      (new Blue-Array color-program vertices)))
   
   
   ;;;
@@ -473,7 +475,6 @@ void main()
           (glDrawArrays GL_TRIANGLES 0 3)
           (glBindVertexArray (get-array blue-array))
           (glDrawArrays GL_TRIANGLES 0 3)
-          (unbind-uniforms color-program)
           (unuse color-program))
       (let ((layer (get-window-layer self)))
         (let ((drawable (metalLayerNextDrawable layer)))
