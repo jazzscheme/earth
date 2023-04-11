@@ -329,9 +329,7 @@
           (glUniformMatrix4dv* blue-uniform-view 1 #f view-matrix))
         (with-pipeline blue-pipeline encoder
           (lambda ()
-            (draw-array blue-array encoder)))))
-    (when (opengl?)
-      (gl-check-error))))
+            (draw-array blue-array encoder)))))))
 
 
 ;;;

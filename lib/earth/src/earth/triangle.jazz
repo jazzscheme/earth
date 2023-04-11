@@ -66,23 +66,23 @@
     #/C/
 uniform mat4 view_matrix, projection_matrix;
 
-in vec3 position;
-in vec3 color;
+in vec4 position;
+in vec4 color;
 
 out vec4 out1;
 out vec4 out2;
 out vec4 out3;
 out vec4 out4;
 
-out vec3 final_color;
+out vec4 final_color;
 
 void main()
 {
-    gl_Position = projection_matrix * view_matrix * vec4(position, 1.0);
-    final_color = vec3(color.x, color.y, color.z);
-    out1 = vec4(position, 1.0);
+    gl_Position = projection_matrix * view_matrix * position;
+    final_color = color;
+    out1 = position;
     out2 = gl_Position;
-    out3 = vec4(final_color, 1.0);
+    out3 = color;
     out4 = vec4(0, 0, 0, 0);
 }
 //#))
@@ -91,13 +91,13 @@ void main()
 (definition color-frag
   (string-append glsl-version
     #/C/
-in vec3 final_color;
+in vec4 final_color;
 
 out vec4 fragColor;
 
 void main()
 {
-    fragColor = vec4(final_color, 1.0);
+    fragColor = final_color;
 }
 //#))
 
@@ -156,7 +156,7 @@ void main()
       (glBindBuffer GL_ARRAY_BUFFER vbo)
       (glBufferDataFloat* GL_ARRAY_BUFFER (f32vector-length vertices) vertices GL_STATIC_DRAW)
       (glEnableVertexAttribArray vertex-attribute)
-      (glVertexAttribPointer* vertex-attribute 3 GL_FLOAT GL_FALSE (* 3 float-size) 0)
+      (glVertexAttribPointer* vertex-attribute 4 GL_FLOAT GL_FALSE (* 4 float-size) 0)
       (glBindBuffer GL_ARRAY_BUFFER 0)
       (set! vertex-buffer vbo))
     (let ((vbo (glGenBuffers*))
@@ -164,7 +164,7 @@ void main()
       (glBindBuffer GL_ARRAY_BUFFER vbo)
       (glBufferDataFloat* GL_ARRAY_BUFFER (f32vector-length colors) colors GL_STATIC_DRAW)
       (glEnableVertexAttribArray color-attribute)
-      (glVertexAttribPointer* color-attribute 3 GL_FLOAT GL_FALSE (* 3 float-size) 0)
+      (glVertexAttribPointer* color-attribute 4 GL_FLOAT GL_FALSE (* 4 float-size) 0)
       (glBindBuffer GL_ARRAY_BUFFER 0)
       (set! color-buffer vbo))
     (glBindVertexArray 0)))
@@ -185,9 +185,9 @@ void main()
       (glBindBuffer GL_ARRAY_BUFFER vbo)
       (glBufferDataFloat* GL_ARRAY_BUFFER (f32vector-length vertices) vertices GL_STATIC_DRAW)
       (glEnableVertexAttribArray vertex-attribute)
-      (glVertexAttribPointer* vertex-attribute 3 GL_FLOAT GL_FALSE (* 6 float-size) 0)
+      (glVertexAttribPointer* vertex-attribute 4 GL_FLOAT GL_FALSE (* 8 float-size) 0)
       (glEnableVertexAttribArray color-attribute)
-      (glVertexAttribPointer* color-attribute 3 GL_FLOAT GL_FALSE (* 6 float-size) (* 3 float-size))
+      (glVertexAttribPointer* color-attribute 4 GL_FLOAT GL_FALSE (* 8 float-size) (* 4 float-size))
       (glBindBuffer GL_ARRAY_BUFFER 0)
       (set! vertex-buffer vbo))
     (glBindVertexArray 0)))
@@ -291,19 +291,19 @@ void main()
   
   
   (method (create-red self)
-    (let ((vertices #f32( 1.0 0.0 -5.0
-                          3.0 0.0 -5.0
-                          2.0 2.0 -5.0))
-          (colors #f32( 1.0 0.0 0.0
-                        1.0 0.0 0.0
-                        1.0 0.0 0.0)))
+    (let ((vertices #f32( 1.0 0.0 -5.0 1.0
+                          3.0 0.0 -5.0 1.0
+                          2.0 2.0 -5.0 1.0))
+          (colors #f32( 1.0 0.0 0.0 1.0
+                        1.0 0.0 0.0 1.0
+                        1.0 0.0 0.0 1.0)))
       (new Red-Array color-program vertices colors)))
   
   
   (method (create-blue self)
-    (let ((vertices #f32( -3.0 0.0 -5.0   0.0 0.0 1.0
-                          -1.0 0.0 -5.0   0.0 0.0 1.0
-                          -2.0 2.0 -5.0   0.0 0.0 1.0)))
+    (let ((vertices #f32( -3.0 0.0 -5.0 1.0   0.0 0.0 1.0 1.0
+                          -1.0 0.0 -5.0 1.0   0.0 0.0 1.0 1.0
+                          -2.0 2.0 -5.0 1.0   0.0 0.0 1.0 1.0)))
       (new Blue-Array color-program vertices)))
   
   
