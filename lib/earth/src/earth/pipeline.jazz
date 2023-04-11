@@ -50,12 +50,249 @@
         (gaea.engine)
         (gaea.generate)
         (gaea.geometry)
+        (gaea.metal)
         (gaea.pipeline)
-        (gaea.pipeline.color)
         (gaea.program)
-        (gaea.program.color)
+        (gaea.render)
         (gaea.shader)
         (gaea.window))
+
+
+;;;
+;;;; Array
+;;;
+
+
+;; Vertices
+;;   triangle1 ...
+;;   v1 c1 v2 c2 v3 c3 ...
+;;   v1x v1y v1z c1r c1g c1b v2x v2y v2z c2r c2g c2b v3x v3y v3z c3r c3g c3b ...
+
+
+@w (
+(constant inline color-vertex-floats <fx>
+  6)
+
+(constant inline color-triangle-floats <fx>
+  (* 3 color-vertex-floats))
+
+(constant inline color-vertex-stride <fx>
+  (* color-vertex-floats float-size))
+
+(constant inline color-vertex-offset <fx>
+  0)
+
+(constant inline color-color-offset <fx>
+  (* 3 float-size))
+
+
+(class Color-Array extends Array
+
+
+  (slot vertices-buffer <Buffer> getter generate)
+
+
+  (method override (initialize self)
+    (nextmethod self)
+    (set! self.vertices-buffer (new Buffer)))
+
+
+  (method override (empty? self)
+    (empty? vertices-buffer))
+
+
+  (method override (count-floats self)
+    (or (get-floats vertices-buffer) 0))
+
+
+  (method override (draw-array self)
+    (when (opengl?)
+      (glBindVertexArray array)
+      (glDrawArrays GL_TRIANGLES 0 (get-indices vertices-buffer))))
+
+
+  (method public (allocate-vertices self)
+    (when (opengl?)
+      (generate-buffer vertices-buffer)))
+
+
+  (method public (free-vertices self)
+    (when (opengl?)
+      (free-buffer vertices-buffer)))
+
+
+  (method override (free-array self)
+    (free-vertices self)
+    (nextmethod self)))
+
+
+;;;
+;;;; Shaders
+;;;
+
+
+(definition (build-color-vs)
+  (string-append glsl-version))
+
+
+(definition (build-color-fs)
+  (string-append glsl-version))
+
+
+;;;
+;;;; Program
+;;;
+
+
+(class Color-Program extends Program
+  
+  
+  (slot projection_matrix-uniform)
+  (slot view_matrix-uniform)
+  (slot vertex-attribute)
+  (slot color-attribute)
+  
+  
+  (method override (prepare self)
+    (set-vs self (create-vertex-shader self))
+    (set-fs self (create-fragment-shader self))
+    (link self)
+    (set! projection_matrix-uniform (add-uniform self "projection_matrix"))
+    (set! view_matrix-uniform (add-uniform self "view_matrix"))
+    (set! vertex-attribute (add-attribute self "vertex"))
+    (set! color-attribute (add-attribute self "color")))
+  
+  
+  (method override (create-vertex-shader self)
+    (build-color-vs))
+  
+  (method override (create-fragment-shader self)
+    (build-color-fs))
+  
+  
+  (method override (enable-attributes self array <Array>) <void>
+    (let ((buffer (get-vertices-buffer array)))
+      (bind-buffer buffer)
+      (enable-vertex-attrib buffer vertex-attribute)
+      (set-attrib-pointer buffer vertex-attribute 3 GL_FLOAT color-vertex-stride color-vertex-offset)
+      (enable-vertex-attrib buffer color-attribute)
+      (set-attrib-pointer buffer color-attribute 3 GL_FLOAT color-vertex-stride color-color-offset)
+      (unbind-buffer buffer)))
+  
+  
+  (method package (bind-uniforms self projection-matrix view-matrix)
+    ;; Projection matrix
+    (glUniformMatrix4dv* projection_matrix-uniform 1 #f projection-matrix)
+    ;; View matrix
+    (glUniformMatrix4dv* view_matrix-uniform 1 #f view-matrix))
+  
+  
+  (method package (unbind-uniforms self)
+    )))
+
+
+;;;
+;;;; Pipeline
+;;;
+
+
+(definition pipeline-sources
+  (list
+;; metal
+    (list
+#/C/
+    #include <metal_stdlib>
+    
+    using namespace metal;
+
+    struct vs_in
+    {
+        float4 position [[attribute(0)]];
+        float4 color    [[attribute(1)]];
+    };
+
+    struct vs_out
+    {
+        float4 position [[position]];
+        float4 color;
+    };
+
+    struct Uniforms
+    {
+        float4x4 projectionMatrix;
+        float4x4 viewMatrix;
+        float4x4 modelMatrix;
+    };
+
+    vertex vs_out vertex_simple(
+        vs_in vertexIn [[stage_in]],
+        constant Uniforms *uniforms [[buffer(0)]])
+    {
+        vs_out vertexOut;
+        vertexOut.position = uniforms->projectionMatrix * uniforms->viewMatrix * uniforms->modelMatrix * vertexIn.position;
+        vertexOut.color = vertexIn.color;
+        return vertexOut;
+    }
+    
+    fragment float4 fragment_simple(
+        vs_out vert [[stage_in]])
+    {
+        return vert.color;
+    }
+//#
+      "vertex_simple"
+      "fragment_simple")
+
+;; opengl
+    (list
+#/C/
+    uniform mat4 projection_matrix;
+    uniform mat4 view_matrix;
+
+    in vec3 vertex;
+    in vec4 color;
+
+    out vec4 final_color;
+
+    void main()
+    {
+        gl_Position = projection_matrix * view_matrix * vec4(vertex, 1.0);
+        final_color = color;
+    }
+//#
+
+;; opengl fs
+#/C/
+    in vec4 final_color;
+
+    out vec4 fragColor;
+
+    void main()
+    {
+        fragColor = final_color;
+    }
+//#)))
+
+
+(definition red-attributes
+  (list
+    (list 'float4 0 1)
+    (list 'float4 0 2)))
+
+(definition red-layouts
+  (list
+    (list 1 (* 4 float-size))
+    (list 2 (* 4 float-size))))
+
+
+(definition blue-attributes
+  (list
+    (list 'float4 0 1)
+    (list 'float4 (* 4 float-size) 1)))
+
+(definition blue-layouts
+  (list
+    (list 1 (* 8 float-size))))
 
 
 ;;;
@@ -71,7 +308,11 @@
   
   
   ;; Pipelines
-  (slot color-pipeline      initialize #f getter generate)
+  (slot red-pipeline        initialize #f getter generate)
+  (slot blue-pipeline       initialize #f getter generate)
+  
+  ;; Uniforms
+  (slot uniform-buffer      initialize #f getter generate)
   
   ;; Arrays
   (slot red-array           initialize #f getter generate)
@@ -92,13 +333,13 @@
   
   (method override (setup-engine self)
     (setup-pipelines self)
-    (when (opengl?)
-      (initialize-arrays self))
+    (setup-arrays self)
     (start-render self))
   
   
   (method (setup-pipelines self)
-    (set! color-pipeline (require-pipeline 'color)))
+    (set! red-pipeline (new Pipeline pipeline-sources red-attributes red-layouts))
+    (set! blue-pipeline (new Pipeline pipeline-sources blue-attributes blue-layouts)))
   
   
   (method (start-render self)
@@ -127,8 +368,28 @@
   ;;;
   
   
-  (method (initialize-arrays self)
-    (define (array-generate data)
+  (method (setup-arrays self)
+    (let ((red-positions (let ((content (f32vector
+                                          1.0 0.0 -5.0 1.
+                                          3.0 0.0 -5.0 1.
+                                          2.0 2.0 -5.0 1.)))
+                           (metalNewBufferWithBytes content (f32vector-length content))))
+          (red-colors (let ((content (f32vector
+                                       1. 0. 0. 1.
+                                       1. 0. 0. 1.
+                                       1. 0. 0. 1.)))
+                        (metalNewBufferWithBytes content (f32vector-length content))))
+          (blue-vertices (let ((content (f32vector
+                                          -3.0 0.0 -5.0 1.   0. 0. 1. 1.
+                                          -1.0 0.0 -5.0 1.   0. 0. 1. 1.
+                                          -2.0 2.0 -5.0 1.   0. 0. 1. 1.)))
+                           (metalNewBufferWithBytes content (f32vector-length content)))))
+      (set! red-array (new Array 1 3 red-positions red-colors))
+      (set! blue-array (new Array 1 3 blue-vertices))))
+    
+    
+  @opengl (
+      (define (array-generate data)
       (let ((array (new Color-Array)))
         (allocate-vertices array)
         (set-data (get-vertices-buffer array) data color-triangle-floats color-vertex-floats)
@@ -166,7 +427,33 @@
       (make-perspective-matrix! projection-matrix 53.13 ratio 1.0 30.0))
     
     ;; View
-    (make-view-matrix! view-matrix (vertex 7. 2. 6.) (lookat (vertex -.513 -.110 -.852) (vertex -.056 .994 -.094) (vertex .857 -4.195e-8 -.516))))
+    (make-view-matrix! view-matrix (vertex 7. 2. 6.) (lookat (vertex -.513 -.110 -.852) (vertex -.056 .994 -.094) (vertex .857 -4.195e-8 -.516)))
+    
+    (unless (opengl?)
+      ;; Uniforms
+      (set! uniform-buffer (let ((content (make-f32vector (* 3 16))))
+                             (define (transfer! offset mat)
+                               (f32vector-set! content (+ offset  0) (matrix-ref mat 0))
+                               (f32vector-set! content (+ offset  1) (matrix-ref mat 1))
+                               (f32vector-set! content (+ offset  2) (matrix-ref mat 2))
+                               (f32vector-set! content (+ offset  3) (matrix-ref mat 3))
+                               (f32vector-set! content (+ offset  4) (matrix-ref mat 4))
+                               (f32vector-set! content (+ offset  5) (matrix-ref mat 5))
+                               (f32vector-set! content (+ offset  6) (matrix-ref mat 6))
+                               (f32vector-set! content (+ offset  7) (matrix-ref mat 7))
+                               (f32vector-set! content (+ offset  8) (matrix-ref mat 8))
+                               (f32vector-set! content (+ offset  9) (matrix-ref mat 9))
+                               (f32vector-set! content (+ offset 10) (matrix-ref mat 10))
+                               (f32vector-set! content (+ offset 11) (matrix-ref mat 11))
+                               (f32vector-set! content (+ offset 12) (matrix-ref mat 12))
+                               (f32vector-set! content (+ offset 13) (matrix-ref mat 13))
+                               (f32vector-set! content (+ offset 14) (matrix-ref mat 14))
+                               (f32vector-set! content (+ offset 15) (matrix-ref mat 15)))
+                             
+                             (transfer!  0 projection-matrix)
+                             (transfer! 16 view-matrix)
+                             (transfer! 32 (make-identity-matrix))
+                             (metalNewBufferWithBytes content (f32vector-length content))))))
   
   
   ;;;
@@ -175,29 +462,22 @@
   
   
   (method override (draw-scene self)
-    ;; Color
-    (if (opengl?)
+    (with-render self
+      (lambda (encoder)
+        (when uniform-buffer
+        (metalEncoderSetVertexBuffer encoder uniform-buffer 0)
+        (with-pipeline red-pipeline encoder
+          (lambda ()
+            (draw-array red-array encoder)))
+        (with-pipeline blue-pipeline encoder
+          (lambda ()
+            (draw-array blue-array encoder)))
+        @opengl
         (begin
-          (use color-pipeline)
           (bind-uniforms color-pipeline projection-matrix view-matrix)
           (draw-array red-array)
           (draw-array blue-array)
-          (unbind-uniforms color-pipeline)
-          (unuse color-pipeline))
-      (let ((layer (get-window-layer self)))
-        (let ((drawable (metalLayerNextDrawable layer)))
-          (let ((buffer (metalMakeCommandBuffer))
-                (pass (metalMakeRenderPassDescriptor drawable)))
-            (let ((encoder (metalMakeRenderCommandEncoder buffer pass)))
-              (metalEncoderSetRenderPipelineState encoder color-pipeline)
-              (metalEncoderSetVertexBuffer encoder uniform-buffer 0)
-              (metalEncoderSetVertexBuffer encoder red-buffer 1)
-              (metalEncoderDrawPrimitives encoder 3)
-              (metalEncoderSetVertexBuffer encoder blue-buffer 1)
-              (metalEncoderDrawPrimitives encoder 3)
-              (metalEndEncoding encoder)
-              (metalPresentDrawable drawable buffer)
-              (metalCommit buffer))))))))
+          (unbind-uniforms color-pipeline)))))))
 
 
 ;;;
