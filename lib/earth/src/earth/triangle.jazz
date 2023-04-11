@@ -64,7 +64,8 @@
 (definition color-vert
   (string-append glsl-version
     #/C/
-uniform mat4 view_matrix, projection_matrix;
+uniform mat4 projection_matrix;
+uniform mat4 view_matrix;
 
 in vec4 position;
 in vec4 color;

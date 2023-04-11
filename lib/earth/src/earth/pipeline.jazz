@@ -318,17 +318,17 @@
       (lambda (encoder)
         (when (and uniform-buffer (metal?))
           (metalEncoderSetVertexBuffer encoder uniform-buffer 0))
-        (when (and uniform-buffer (opengl?))
-          (glUniformMatrix4dv* red-uniform-projection 1 #f projection-matrix)
-          (glUniformMatrix4dv* red-uniform-view 1 #f view-matrix))
         (with-pipeline red-pipeline encoder
           (lambda ()
+            (when (and red-uniform-projection (opengl?))
+              (glUniformMatrix4dv* red-uniform-projection 1 #f projection-matrix)
+              (glUniformMatrix4dv* red-uniform-view 1 #f view-matrix))
             (draw-array red-array encoder)))
-        (when (and uniform-buffer (opengl?))
-          (glUniformMatrix4dv* blue-uniform-projection 1 #f projection-matrix)
-          (glUniformMatrix4dv* blue-uniform-view 1 #f view-matrix))
         (with-pipeline blue-pipeline encoder
           (lambda ()
+            (when (and blue-uniform-projection (opengl?))
+              (glUniformMatrix4dv* blue-uniform-projection 1 #f projection-matrix)
+              (glUniformMatrix4dv* blue-uniform-view 1 #f view-matrix))
             (draw-array blue-array encoder)))))))
 
 
