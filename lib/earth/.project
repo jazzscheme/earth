@@ -19,8 +19,8 @@
       (<Project-Directory>                 directory: {Directory :context "src" "earth"}
         (<Jazz-File>       name: triangle  source: {File :context "src" "earth" "triangle.jazz"})
         (<Jazz-File>       name: mesh      source: {File :context "src" "earth" "mesh.jazz"})
-        (<Jazz-File>       name: array     source: {File :context "src" "earth" "array.jazz"})
         (<Jazz-File>       name: texture   source: {File :context "src" "earth" "texture.jazz"})
         (<Jazz-File>       name: model     source: {File :context "src" "earth" "model.jazz"})
         (<Jazz-File>       name: clear     source: {File :context "src" "earth" "clear.jazz"})
-        (<Jazz-File>       name: interface source: {File :context "src" "earth" "interface.jazz"}))))))
+        (<Jazz-File>       name: interface source: {File :context "src" "earth" "interface.jazz"})
+        (<Jazz-File>       name: pipeline  source: {File :context "src" "earth" "pipeline.jazz"}))))))
