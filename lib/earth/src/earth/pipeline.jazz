@@ -249,14 +249,14 @@
     uniform mat4 projection_matrix;
     uniform mat4 view_matrix;
 
-    in vec3 vertex;
+    in vec3 position;
     in vec4 color;
 
     out vec4 final_color;
 
     void main()
     {
-        gl_Position = projection_matrix * view_matrix * vec4(vertex, 1.0);
+        gl_Position = projection_matrix * view_matrix * vec4(position, 1.0);
         final_color = color;
     }
 //#
@@ -276,8 +276,8 @@
 
 (definition red-attributes
   (list
-    (list 'float4 0 1)
-    (list 'float4 0 2)))
+    (list "position" 'float4 0 1)
+    (list "color"    'float4 0 2)))
 
 (definition red-layouts
   (list
@@ -287,8 +287,8 @@
 
 (definition blue-attributes
   (list
-    (list 'float4 0 1)
-    (list 'float4 (* 4 float-size) 1)))
+    (list "position" 'float4 0 1)
+    (list "color"    'float4 (* 4 float-size) 1)))
 
 (definition blue-layouts
   (list
