@@ -257,7 +257,7 @@
                      5.0 2.5 3.0 1.   1. 0. 0. 0.)))
       (let ((size (f32vector-length content))
             (stride 8))
-        (set! texture-buffer (metalNewBufferWithBytes content size))
+        (set! texture-buffer (metalNewBufferWithFloats content size))
         (set! texture-vertices (/ size stride)))))
   
   
@@ -294,7 +294,7 @@
                                  (f32vector-set! content (+ offset 15) (matrix-ref mat 15)))
                                
                                (transfer! 0 orthographic-matrix)
-                               (metalNewBufferWithBytes content (f32vector-length content))))
+                               (metalNewBufferWithFloats content (f32vector-length content))))
     ;; Buffer
     (let ((content (f32vector
                       0.0 10.0 0.0 1.0   0.0 0.0 0.0 0.0
@@ -305,7 +305,7 @@
                      10.0 10.0 0.0 1.0   1.0 0.0 0.0 0.0)))
       (let ((size (f32vector-length content))
             (stride 8))
-        (set! interface-buffer (metalNewBufferWithBytes content size))
+        (set! interface-buffer (metalNewBufferWithFloats content size))
         (set! interface-vertices (/ size stride)))))
 
   
@@ -355,7 +355,7 @@
                            (transfer!  0 projection-matrix)
                            (transfer! 16 view-matrix)
                            (transfer! 32 (make-identity-matrix))
-                           (metalNewBufferWithBytes content (f32vector-length content)))))
+                           (metalNewBufferWithFloats content (f32vector-length content)))))
   
   
   ;;;
