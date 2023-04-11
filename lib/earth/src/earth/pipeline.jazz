@@ -118,17 +118,10 @@
 #/C/
     layout (std140) uniform Matrices
     {
-        mat4 projview_matrix;
-        // mat4 projection_matrix;
-        // mat4 view_matrix;
-        // mat4 model_matrix;
+        mat4 projection_matrix;
+        mat4 view_matrix;
+        mat4 model_matrix;
     };
-    
-    // uniform mat4 projview_matrix;
-    
-    // uniform mat4 projection_matrix;
-    // uniform mat4 view_matrix;
-    // uniform mat4 model_matrix;
 
     in vec4 position;
     in vec4 color;
@@ -137,8 +130,7 @@
 
     void main()
     {
-        // gl_Position = projection_matrix * view_matrix * model_matrix * position;
-        gl_Position = projview_matrix * position;
+        gl_Position = projection_matrix * view_matrix * model_matrix * position;
         final_color = color;
     }
 //#)
@@ -194,9 +186,8 @@
   (slot blue-pipeline       initialize #f getter generate)
   
   ;; Uniforms
+  (slot uniform-matrices    initialize 0  getter generate)
   (slot uniform-buffer      initialize #f getter generate)
-  (slot uniform-content     initialize #f getter generate)
-  (slot uniform-projview    initialize #f getter generate)
   
   ;; Arrays
   (slot red-array           initialize #f getter generate)
@@ -225,11 +216,11 @@
     (set! red-pipeline (new Pipeline pipeline-sources red-attributes red-layouts))
     (let ((programid (get-program (get-program red-pipeline))))
       (let ((matrices-index (glGetUniformBlockIndex programid "Matrices")))
-        (glUniformBlockBinding programid matrices-index 2)))
+        (glUniformBlockBinding programid matrices-index uniform-matrices)))
     (set! blue-pipeline (new Pipeline pipeline-sources blue-attributes blue-layouts))
     (let ((programid (get-program (get-program blue-pipeline))))
       (let ((matrices-index (glGetUniformBlockIndex programid "Matrices")))
-        (glUniformBlockBinding programid matrices-index 2))))
+        (glUniformBlockBinding programid matrices-index uniform-matrices))))
   
   
   (method (start-render self)
@@ -295,7 +286,7 @@
     
     ;; Uniforms
     (when (not uniform-buffer)
-      (set! uniform-buffer (let ((content (make-f32vector 16)))
+      (set! uniform-buffer (let ((content (make-f32vector (* 3 16))))
                            (define (transfer! offset mat)
                              (f32vector-set! content (+ offset  0) (matrix-ref mat 0))
                              (f32vector-set! content (+ offset  1) (matrix-ref mat 1))
@@ -314,16 +305,15 @@
                              (f32vector-set! content (+ offset 14) (matrix-ref mat 14))
                              (f32vector-set! content (+ offset 15) (matrix-ref mat 15)))
                            
-                           (transfer!  0 (matrix-multiply projection-matrix view-matrix))
-                           ;(transfer!  0 projection-matrix)
-                           ;(transfer! 16 view-matrix)
-                           ;(transfer! 32 (make-identity-matrix))
-                           (set! uniform-content content)
+                           (transfer!  0 projection-matrix)
+                           (transfer! 16 view-matrix)
+                           (transfer! 32 (make-identity-matrix))
                            (if (metal?)
                                (metalNewBufferWithFloats content (f32vector-length content))
-                             (set! uniform-projview (get-uniform (get-program red-pipeline) "projview_matrix"))
                              (let ((ubo (glGenBuffers*)))
-                               (glBindBufferBase GL_UNIFORM_BUFFER 2 ubo)
+                               (glBindBuffer GL_UNIFORM_BUFFER ubo)
+                               (glBufferDataFloat* GL_UNIFORM_BUFFER (f32vector-length content) content GL_DYNAMIC_DRAW)
+                               (glBindBufferBase GL_UNIFORM_BUFFER uniform-matrices ubo)
                                ubo))))))
   
   
@@ -335,11 +325,8 @@
   (method override (draw-scene self)
     (with-render self
       (lambda (encoder)
-        (when uniform-buffer
-          (if (metal?)
-              (metalEncoderSetVertexBuffer encoder uniform-buffer 0)
-            (glBindBuffer GL_UNIFORM_BUFFER uniform-buffer)
-            (glBufferDataFloat* GL_UNIFORM_BUFFER (f32vector-length uniform-content) uniform-content GL_DYNAMIC_DRAW)))
+        (when (and uniform-buffer (metal?))
+          (metalEncoderSetVertexBuffer encoder uniform-buffer 0))
         (with-pipeline red-pipeline encoder
           (lambda ()
             (draw-array red-array encoder)))
