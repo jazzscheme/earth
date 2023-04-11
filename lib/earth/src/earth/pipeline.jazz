@@ -116,8 +116,19 @@
       ;; vertex
       (string-append glsl-version
 #/C/
-    uniform mat4 projection_matrix;
-    uniform mat4 view_matrix;
+    layout (std140) uniform Matrices
+    {
+        mat4 projview_matrix;
+        // mat4 projection_matrix;
+        // mat4 view_matrix;
+        // mat4 model_matrix;
+    };
+    
+    // uniform mat4 projview_matrix;
+    
+    // uniform mat4 projection_matrix;
+    // uniform mat4 view_matrix;
+    // uniform mat4 model_matrix;
 
     in vec4 position;
     in vec4 color;
@@ -126,7 +137,8 @@
 
     void main()
     {
-        gl_Position = projection_matrix * view_matrix * position;
+        // gl_Position = projection_matrix * view_matrix * model_matrix * position;
+        gl_Position = projview_matrix * position;
         final_color = color;
     }
 //#)
@@ -183,10 +195,8 @@
   
   ;; Uniforms
   (slot uniform-buffer      initialize #f getter generate)
-  (slot red-uniform-projection  initialize #f getter generate)
-  (slot red-uniform-view        initialize #f getter generate)
-  (slot blue-uniform-projection initialize #f getter generate)
-  (slot blue-uniform-view       initialize #f getter generate)
+  (slot uniform-content     initialize #f getter generate)
+  (slot uniform-projview    initialize #f getter generate)
   
   ;; Arrays
   (slot red-array           initialize #f getter generate)
@@ -213,7 +223,13 @@
   
   (method (setup-pipelines self)
     (set! red-pipeline (new Pipeline pipeline-sources red-attributes red-layouts))
-    (set! blue-pipeline (new Pipeline pipeline-sources blue-attributes blue-layouts)))
+    (let ((programid (get-program (get-program red-pipeline))))
+      (let ((matrices-index (glGetUniformBlockIndex programid "Matrices")))
+        (glUniformBlockBinding programid matrices-index 2)))
+    (set! blue-pipeline (new Pipeline pipeline-sources blue-attributes blue-layouts))
+    (let ((programid (get-program (get-program blue-pipeline))))
+      (let ((matrices-index (glGetUniformBlockIndex programid "Matrices")))
+        (glUniformBlockBinding programid matrices-index 2))))
   
   
   (method (start-render self)
@@ -278,34 +294,37 @@
     (make-view-matrix! view-matrix (vertex 7. 2. 6.) (lookat (vertex -.513 -.110 -.852) (vertex -.056 .994 -.094) (vertex .857 -4.195e-8 -.516)))
     
     ;; Uniforms
-    (if (metal?)
-        (set! uniform-buffer (let ((content (make-f32vector (* 3 16))))
-                               (define (transfer! offset mat)
-                                 (f32vector-set! content (+ offset  0) (matrix-ref mat 0))
-                                 (f32vector-set! content (+ offset  1) (matrix-ref mat 1))
-                                 (f32vector-set! content (+ offset  2) (matrix-ref mat 2))
-                                 (f32vector-set! content (+ offset  3) (matrix-ref mat 3))
-                                 (f32vector-set! content (+ offset  4) (matrix-ref mat 4))
-                                 (f32vector-set! content (+ offset  5) (matrix-ref mat 5))
-                                 (f32vector-set! content (+ offset  6) (matrix-ref mat 6))
-                                 (f32vector-set! content (+ offset  7) (matrix-ref mat 7))
-                                 (f32vector-set! content (+ offset  8) (matrix-ref mat 8))
-                                 (f32vector-set! content (+ offset  9) (matrix-ref mat 9))
-                                 (f32vector-set! content (+ offset 10) (matrix-ref mat 10))
-                                 (f32vector-set! content (+ offset 11) (matrix-ref mat 11))
-                                 (f32vector-set! content (+ offset 12) (matrix-ref mat 12))
-                                 (f32vector-set! content (+ offset 13) (matrix-ref mat 13))
-                                 (f32vector-set! content (+ offset 14) (matrix-ref mat 14))
-                                 (f32vector-set! content (+ offset 15) (matrix-ref mat 15)))
-                               
-                               (transfer!  0 projection-matrix)
-                               (transfer! 16 view-matrix)
-                               (transfer! 32 (make-identity-matrix))
-                               (metalNewBufferWithFloats content (f32vector-length content))))
-      (set! red-uniform-projection (get-uniform (get-program red-pipeline) "projection_matrix"))
-      (set! red-uniform-view (get-uniform (get-program red-pipeline) "view_matrix"))
-      (set! blue-uniform-projection (get-uniform (get-program blue-pipeline) "projection_matrix"))
-      (set! blue-uniform-view (get-uniform (get-program blue-pipeline) "view_matrix"))))
+    (when (not uniform-buffer)
+      (set! uniform-buffer (let ((content (make-f32vector 16)))
+                           (define (transfer! offset mat)
+                             (f32vector-set! content (+ offset  0) (matrix-ref mat 0))
+                             (f32vector-set! content (+ offset  1) (matrix-ref mat 1))
+                             (f32vector-set! content (+ offset  2) (matrix-ref mat 2))
+                             (f32vector-set! content (+ offset  3) (matrix-ref mat 3))
+                             (f32vector-set! content (+ offset  4) (matrix-ref mat 4))
+                             (f32vector-set! content (+ offset  5) (matrix-ref mat 5))
+                             (f32vector-set! content (+ offset  6) (matrix-ref mat 6))
+                             (f32vector-set! content (+ offset  7) (matrix-ref mat 7))
+                             (f32vector-set! content (+ offset  8) (matrix-ref mat 8))
+                             (f32vector-set! content (+ offset  9) (matrix-ref mat 9))
+                             (f32vector-set! content (+ offset 10) (matrix-ref mat 10))
+                             (f32vector-set! content (+ offset 11) (matrix-ref mat 11))
+                             (f32vector-set! content (+ offset 12) (matrix-ref mat 12))
+                             (f32vector-set! content (+ offset 13) (matrix-ref mat 13))
+                             (f32vector-set! content (+ offset 14) (matrix-ref mat 14))
+                             (f32vector-set! content (+ offset 15) (matrix-ref mat 15)))
+                           
+                           (transfer!  0 (matrix-multiply projection-matrix view-matrix))
+                           ;(transfer!  0 projection-matrix)
+                           ;(transfer! 16 view-matrix)
+                           ;(transfer! 32 (make-identity-matrix))
+                           (set! uniform-content content)
+                           (if (metal?)
+                               (metalNewBufferWithFloats content (f32vector-length content))
+                             (set! uniform-projview (get-uniform (get-program red-pipeline) "projview_matrix"))
+                             (let ((ubo (glGenBuffers*)))
+                               (glBindBufferBase GL_UNIFORM_BUFFER 2 ubo)
+                               ubo))))))
   
   
   ;;;
@@ -316,19 +335,16 @@
   (method override (draw-scene self)
     (with-render self
       (lambda (encoder)
-        (when (and uniform-buffer (metal?))
-          (metalEncoderSetVertexBuffer encoder uniform-buffer 0))
+        (when uniform-buffer
+          (if (metal?)
+              (metalEncoderSetVertexBuffer encoder uniform-buffer 0)
+            (glBindBuffer GL_UNIFORM_BUFFER uniform-buffer)
+            (glBufferDataFloat* GL_UNIFORM_BUFFER (f32vector-length uniform-content) uniform-content GL_DYNAMIC_DRAW)))
         (with-pipeline red-pipeline encoder
           (lambda ()
-            (when (and red-uniform-projection (opengl?))
-              (glUniformMatrix4dv* red-uniform-projection 1 #f projection-matrix)
-              (glUniformMatrix4dv* red-uniform-view 1 #f view-matrix))
             (draw-array red-array encoder)))
         (with-pipeline blue-pipeline encoder
           (lambda ()
-            (when (and blue-uniform-projection (opengl?))
-              (glUniformMatrix4dv* blue-uniform-projection 1 #f projection-matrix)
-              (glUniformMatrix4dv* blue-uniform-view 1 #f view-matrix))
             (draw-array blue-array encoder)))))))
 
 
