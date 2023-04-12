@@ -54,7 +54,6 @@
         (gaea.mesher)
         (gaea.opengl)
         (gaea.opengl.glew)
-        (gaea.opengl.texture)
         (gaea.program)
         (gaea.program.mesh)
         (gaea.program.model)

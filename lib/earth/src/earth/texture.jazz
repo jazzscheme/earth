@@ -106,7 +106,6 @@
         texture2d<float, access::sample> tex [[texture(0)]],
         sampler samplr [[sampler(0)]])
     {
-        // return tex.sample(samplr, vert.texture_coord);
         return tex.sample(samplr, float2(vert.texture_coord.x, vert.texture_coord.y));
     }
 //#
@@ -214,27 +213,6 @@
     (gaea-uniform-binding texture-pipeline uniform-binding))
   
   
-  (method (start-render self)
-    (let ((thread
-            (new-thread
-              (lambda ()
-                (declare (proper-tail-calls))
-                (let ((period (/ 1. 30.)))
-                  (let (loop)
-                    (render-scene self)
-                    (sleep period)
-                    (loop))))
-              'render)))
-      (set! render-thread thread)
-      (thread-start! thread)))
-  
-  
-  (method (stop-render self)
-    (when render-thread
-      (thread-terminate! render-thread)
-      (set! render-thread #f)))
-  
-  
   ;;;
   ;;;; Arrays
   ;;;
@@ -257,9 +235,8 @@
   
   (method (setup-textures self)
     (set! texture (make-file-cairo-texture {File Home "Media" "Oasis.png"}))
-    (let ((surface (get-surface texture)))
-      (flush surface)
-      (map-texture texture))
+    (flush (get-surface texture))
+    (map-texture texture)
     (setup-uniform texture texture-pipeline "texture_sampler"))
   
   
@@ -303,6 +280,32 @@
         (transfer! 16 view-matrix)
         (transfer! 32 (make-identity-matrix))
         (set! uniform-buffer (new Uniform-Buffer uniform-binding content)))))
+  
+  
+  ;;;
+  ;;;; Render
+  ;;;
+  
+  
+  (method (start-render self)
+    (let ((thread
+            (new-thread
+              (lambda ()
+                (declare (proper-tail-calls))
+                (let ((period (/ 1. 30.)))
+                  (let (loop)
+                    (render-scene self)
+                    (sleep period)
+                    (loop))))
+              'render)))
+      (set! render-thread thread)
+      (thread-start! thread)))
+  
+  
+  (method (stop-render self)
+    (when render-thread
+      (thread-terminate! render-thread)
+      (set! render-thread #f)))
   
   
   ;;;

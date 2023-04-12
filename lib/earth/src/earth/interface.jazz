@@ -47,104 +47,29 @@
         (jazz.screen)
         (gaea.array)
         (gaea.buffer)
-        (gaea.engine.metal)
+        (gaea.engine)
         (gaea.generate)
         (gaea.geometry)
         (gaea.mesh)
         (gaea.mesher)
-        (gaea.metal)
-        (gaea.metal.geometry)
-        (gaea.metal.texture)
-        (gaea.program)
-        (gaea.program.mesh)
-        (gaea.program.texture)
+        (gaea.pipeline)
+        (gaea.render)
         (gaea.shader)
         (gaea.texture)
+        (gaea.uniform)
         (gaea.uv)
         (gaea.window))
 
 
 ;;;
-;;;; Window
+;;;; Texture
 ;;;
 
 
-(class Interface-Window extends Gaea-Window
-  
-  
-  (form
-    (<install> caption-base: "Interface"))
-  
-  
-  ;; Pipelines
-  (slot texture-pipeline    initialize #f getter generate)
-  
-  ;; Buffers
-  (slot uniform-buffer      initialize #f getter generate)
-  (slot texture-buffer      initialize #f getter generate)
-  (slot texture-vertices    initialize #f getter generate)
-  
-  ;; Matrices
-  (slot projection-matrix   initialize (make-matrix) getter generate)
-  (slot view-matrix         initialize (make-matrix) getter generate)
-  (slot orthographic-matrix initialize (make-matrix) getter generate)
-  
-  ;; Textures
-  (slot texture             initialize #f getter generate)
-  
-  ;; Interface
-  (slot interface-pipeline  initialize #f getter generate)
-  (slot interface-texture   initialize #f getter generate)
-  (slot interface-uniforms  initialize #f getter generate)
-  (slot interface-buffer    initialize #f getter generate)
-  (slot interface-vertices  initialize #f getter generate)
-  
-  ;; Render
-  (slot render-thread       initialize #f getter generate)
-  
-  
-  (method override (destroy self)
-    (stop-render self)
-    (nextmethod self))
-  
-  
-  (method override (setup-engine self)
-    ;; quicky until crashes fixed
-    (platformInhibitAutoReleasePool)
-    (init-fonts)
-    (create-pipelines self)
-    (create-buffers self)
-    (start-render self))
-  
-  
-  (method (start-render self)
-    (let ((thread
-            (new-thread
-              (lambda ()
-                (declare (proper-tail-calls))
-                (let ((period (/ 1. 30.)))
-                  (let (loop)
-                    (render-scene self)
-                    (sleep period)
-                    (loop))))
-              'render)))
-      (set! render-thread thread)
-      (thread-start! thread)))
-  
-  
-  (method (stop-render self)
-    (when render-thread
-      (thread-terminate! render-thread)
-      (set! render-thread #f)))
-  
-  
-  ;;;
-  ;;;; Pipelines
-  ;;;
-  
-  
-  (method (create-pipelines self)
-    (let ((lib (metalMakeLibrary
+(definition texture-sources
+  (list
+    ;; metal
+    (list
 #/C/
     #include <metal_stdlib>
     
@@ -152,14 +77,14 @@
 
     struct vs_in
     {
-        float4 position  [[attribute(0)]];
-        float2 texCoords [[attribute(1)]];
+        float4 position      [[attribute(0)]];
+        float3 texture_coord [[attribute(1)]];
     };
 
     struct vs_out
     {
         float4 position [[position]];
-        float2 texCoords;
+        float3 texture_coord;
     };
 
     struct Uniforms
@@ -171,11 +96,11 @@
 
     vertex vs_out vertex_simple(
         vs_in vertexIn [[stage_in]],
-        constant Uniforms *uniforms  [[buffer(1)]])
+        constant Uniforms *uniforms [[buffer(0)]])
     {
         vs_out vertexOut;
         vertexOut.position = uniforms->projectionMatrix * uniforms->viewMatrix * uniforms->modelMatrix * vertexIn.position;
-        vertexOut.texCoords = vertexIn.texCoords;
+        vertexOut.texture_coord = vertexIn.texture_coord;
         return vertexOut;
     }
     
@@ -184,18 +109,71 @@
         texture2d<float, access::sample> tex [[texture(0)]],
         sampler samplr [[sampler(0)]])
     {
-        return tex.sample(samplr, vert.texCoords);
+        // return tex.sample(samplr, vert.texture_coord);
+        return tex.sample(samplr, float2(vert.texture_coord.x, vert.texture_coord.y));
     }
 //#
-))
-          (desc (metalMakeVertexDescriptor)))
-      (metalVertexDescriptorAttribute desc 0 MTLVertexFormatFloat4 0 0)
-      (metalVertexDescriptorAttribute desc 1 MTLVertexFormatFloat2 (* 4 float-size) 0)
-      (metalVertexDescriptorLayout desc 0 MTLVertexStepFunctionPerVertex (* 8 float-size))
-      (let ((pipeline (metalMakeRenderPipelineState lib "vertex_simple" "fragment_simple" desc)))
-        (set! texture-pipeline pipeline)))
-    
-    (let ((lib (metalMakeLibrary
+      "vertex_simple"
+      "fragment_simple")
+
+    ;; opengl
+    (list
+      ;; vertex
+      (string-append glsl-version
+#/C/
+    layout (std140) uniform Matrices
+    {
+        mat4 projection_matrix;
+        mat4 view_matrix;
+        mat4 model_matrix;
+    };
+
+    in vec4 position;
+    in vec3 texture_coord;
+
+    out vec3 final_texture;
+
+    void main()
+    {
+        gl_Position = projection_matrix * view_matrix * model_matrix * position;
+        final_texture = texture_coord;
+    }
+//#)
+      ;; fragment
+      (string-append glsl-version
+#/C/
+    uniform sampler2D texture_sampler;
+
+    in vec3 final_texture;
+
+    out vec4 fragColor;
+
+    void main()
+    {
+        fragColor = texture(texture_sampler, vec2(final_texture.x, final_texture.y));;
+    }
+//#))))
+
+
+(definition texture-attributes
+  (list
+    (list "position"      'float4 0 1)
+    (list "texture_coord" 'float2 (* 4 float-size) 1)))
+
+(definition texture-layouts
+  (list
+    (list 1 (* 8 float-size))))
+
+
+;;;
+;;;; Interface
+;;;
+
+
+(definition interface-sources
+  (list
+    ;; metal
+    (list
 #/C/
     #include <metal_stdlib>
     
@@ -220,7 +198,7 @@
 
     vertex vs_out vertex_simple(
         vs_in vertexIn [[stage_in]],
-        constant Uniforms *uniforms  [[buffer(1)]])
+        constant Uniforms *uniforms  [[buffer(0)]])
     {
         vs_out vertexOut;
         vertexOut.position = uniforms->orthographicMatrix * vertexIn.position;
@@ -236,77 +214,228 @@
         return tex.sample(samplr, vert.texCoords);
     }
 //#
-))
-          (desc (metalMakeVertexDescriptor)))
-      (metalVertexDescriptorAttribute desc 0 MTLVertexFormatFloat4 0 0)
-      (metalVertexDescriptorAttribute desc 1 MTLVertexFormatFloat2 (* 4 float-size) 0)
-      (metalVertexDescriptorLayout desc 0 MTLVertexStepFunctionPerVertex (* 8 float-size))
-      (let ((pipeline (metalMakeRenderPipelineState lib "vertex_simple" "fragment_simple" desc)))
-        (set! interface-pipeline pipeline))))
+      "vertex_simple"
+      "fragment_simple")
+    
+    ;; opengl
+    (list
+      ;; vertex
+      (string-append glsl-version
+#/C/
+    layout (std140) uniform Matrices
+    {
+        mat4 orthographic_matrix;
+    };
+
+    in vec4 position;
+    in vec3 texture_coord;
+
+    out vec3 final_texture;
+
+    void main()
+    {
+        gl_Position = orthographic_matrix * position;
+        final_texture = texture_coord;
+    }
+//#)
+      ;; fragment
+      (string-append glsl-version
+#/C/
+    uniform sampler2D texture_sampler;
+
+    in vec3 final_texture;
+
+    out vec4 fragColor;
+
+    void main()
+    {
+        fragColor = texture(texture_sampler, vec2(final_texture.x, final_texture.y));;
+    }
+//#))))
+
+
+(definition interface-attributes
+  (list
+    (list "position"      'float4 0 1)
+    (list "texture_coord" 'float2 (* 4 float-size) 1)))
+
+(definition interface-layouts
+  (list
+    (list 1 (* 8 float-size))))
+
+
+;;;
+;;;; Window
+;;;
+
+
+(class Interface-Window extends Gaea-Window
+  
+  
+  (form
+    (<install> caption-base: "Interface"))
+  
+  
+  ;; Texture
+  (slot texture-pipeline    initialize #f getter generate)
+  (slot texture-array       initialize #f getter generate)
+  (slot texture-texture     initialize #f getter generate)
+  (slot texture-binding     initialize 0  getter generate)
+  (slot texture-uniform     initialize #f getter generate)
+  
+  ;; Interface
+  (slot interface-pipeline  initialize #f getter generate)
+  (slot interface-array     initialize #f getter generate)
+  (slot interface-texture   initialize #f getter generate)
+  (slot interface-binding   initialize 1  getter generate)
+  (slot interface-uniform   initialize #f getter generate)
+
+  ;; Matrices
+  (slot projection-matrix   initialize (make-matrix) getter generate)
+  (slot view-matrix         initialize (make-matrix) getter generate)
+  (slot orthographic-matrix initialize (make-matrix) getter generate)
+  
+  ;; Render
+  (slot render-thread       initialize #f getter generate)
+  
+  
+  (method override (destroy self)
+    (stop-render self)
+    (nextmethod self))
+  
+  
+  (method override (setup-engine self)
+    ;; quicky until crashes fixed
+    (platformInhibitAutoReleasePool)
+    (init-fonts)
+    (update-matrices self)
+    (setup-texture self)
+    (setup-interface self)
+    (start-render self))
   
   
   ;;;
-  ;;;; Buffers
+  ;;;; Matrices
   ;;;
   
   
-  (method (create-buffers self)
-    (let ((content (f32vector
-                     4.0 0.5 3.0 1.   1. 1. 0. 0.
-                     6.0 0.5 3.0 1.   0. 0. 0. 0.
-                     5.0 2.5 3.0 1.   1. 0. 0. 0.)))
-      (let ((size (f32vector-length content))
-            (stride 8))
-        (set! texture-buffer (metalNewBufferWithFloats content size))
-        (set! texture-vertices (/ size stride)))))
+  (method (update-matrices self)
+    (let ((width 800)
+          (height 500))
+      ;; Projection
+      (let ((ratio (/ width height)))
+        (make-perspective-matrix! projection-matrix 53.13 ratio 1.0 30.0))
+      
+      ;; View
+      (make-view-matrix! view-matrix (vertex 7. 2. 6.) (lookat (vertex -.513 -.110 -.852) (vertex -.056 .994 -.094) (vertex .857 -4.195e-8 -.516)))
+      
+      ;; Orthographic
+      (make-orthographic-matrix! orthographic-matrix 0.0 10.0 0.0 10.0 0.0 10.0)))
   
   
   ;;;
-  ;;;; Textures
+  ;;;; Texture
   ;;;
   
   
-  (method (setup-textures self)
+  (method (setup-texture self)
+    ;; Pipeline
+    (set! texture-pipeline (new Pipeline texture-sources texture-attributes texture-layouts))
+    
+    ;; Array
+    (let ((content
+            #f32( 4.0 0.5 3.0 1.0   1.0 1.0 0.0   0.0
+                  6.0 0.5 3.0 1.0   0.0 0.0 0.0   0.0
+                  5.0 2.5 3.0 1.0   1.0 0.0 0.0   0.0 )))
+      (let ((texture-vertices (new Buffer content)))
+        (set! texture-array (new Array texture-pipeline 1 3 texture-vertices))))
+    
     ;; Texture
-    (set! interface-texture (make-cairo-metal-texture (get-width self) (get-height self) scale?: #t))
-    (fill-rect (get-surface interface-texture) (new Rect 100 100 (- (get-width self) 100) (- (get-height self) 100)) {Color Blue})
-    (set-font (get-surface interface-texture) {Font font-name: tahoma point-size: 22.5})
-    (draw-text (get-surface interface-texture) 110 110 "Hello Metal!" {Color Yellow})
-    (map-texture interface-texture)
-    ;; Uniforms
-    (set! interface-uniforms (let ((content (make-f32vector 16)))
-                               (define (transfer! offset mat)
-                                 (f32vector-set! content (+ offset  0) (matrix-ref mat 0))
-                                 (f32vector-set! content (+ offset  1) (matrix-ref mat 1))
-                                 (f32vector-set! content (+ offset  2) (matrix-ref mat 2))
-                                 (f32vector-set! content (+ offset  3) (matrix-ref mat 3))
-                                 (f32vector-set! content (+ offset  4) (matrix-ref mat 4))
-                                 (f32vector-set! content (+ offset  5) (matrix-ref mat 5))
-                                 (f32vector-set! content (+ offset  6) (matrix-ref mat 6))
-                                 (f32vector-set! content (+ offset  7) (matrix-ref mat 7))
-                                 (f32vector-set! content (+ offset  8) (matrix-ref mat 8))
-                                 (f32vector-set! content (+ offset  9) (matrix-ref mat 9))
-                                 (f32vector-set! content (+ offset 10) (matrix-ref mat 10))
-                                 (f32vector-set! content (+ offset 11) (matrix-ref mat 11))
-                                 (f32vector-set! content (+ offset 12) (matrix-ref mat 12))
-                                 (f32vector-set! content (+ offset 13) (matrix-ref mat 13))
-                                 (f32vector-set! content (+ offset 14) (matrix-ref mat 14))
-                                 (f32vector-set! content (+ offset 15) (matrix-ref mat 15)))
-                               
-                               (transfer! 0 orthographic-matrix)
-                               (metalNewBufferWithFloats content (f32vector-length content))))
-    ;; Buffer
-    (let ((content (f32vector
-                      0.0 10.0 0.0 1.0   0.0 0.0 0.0 0.0
-                     10.0 10.0 0.0 1.0   1.0 0.0 0.0 0.0
-                      0.0  0.0 0.0 1.0   0.0 1.0 0.0 0.0
-                     10.0  0.0 0.0 1.0   1.0 1.0 0.0 0.0
-                      0.0  0.0 0.0 1.0   0.0 1.0 0.0 0.0
-                     10.0 10.0 0.0 1.0   1.0 0.0 0.0 0.0)))
-      (let ((size (f32vector-length content))
-            (stride 8))
-        (set! interface-buffer (metalNewBufferWithFloats content size))
-        (set! interface-vertices (/ size stride)))))
+    (set! texture-texture (make-file-cairo-texture {File Home "Media" "Oasis.png"}))
+    (flush (get-surface texture-texture))
+    (map-texture texture-texture)
+    (setup-uniform texture-texture texture-pipeline "texture_sampler")
+    
+    ;; Uniform
+    (gaea-uniform-binding texture-pipeline texture-binding)
+    (let ((content (make-f32vector (* 3 16))))
+      (define (transfer! offset mat)
+        (f32vector-set! content (+ offset  0) (matrix-ref mat 0))
+        (f32vector-set! content (+ offset  1) (matrix-ref mat 1))
+        (f32vector-set! content (+ offset  2) (matrix-ref mat 2))
+        (f32vector-set! content (+ offset  3) (matrix-ref mat 3))
+        (f32vector-set! content (+ offset  4) (matrix-ref mat 4))
+        (f32vector-set! content (+ offset  5) (matrix-ref mat 5))
+        (f32vector-set! content (+ offset  6) (matrix-ref mat 6))
+        (f32vector-set! content (+ offset  7) (matrix-ref mat 7))
+        (f32vector-set! content (+ offset  8) (matrix-ref mat 8))
+        (f32vector-set! content (+ offset  9) (matrix-ref mat 9))
+        (f32vector-set! content (+ offset 10) (matrix-ref mat 10))
+        (f32vector-set! content (+ offset 11) (matrix-ref mat 11))
+        (f32vector-set! content (+ offset 12) (matrix-ref mat 12))
+        (f32vector-set! content (+ offset 13) (matrix-ref mat 13))
+        (f32vector-set! content (+ offset 14) (matrix-ref mat 14))
+        (f32vector-set! content (+ offset 15) (matrix-ref mat 15)))
+      
+      (transfer!  0 projection-matrix)
+      (transfer! 16 view-matrix)
+      (transfer! 32 (make-identity-matrix))
+      (set! texture-uniform (new Uniform-Buffer texture-binding content))))
+  
+  
+  ;;;
+  ;;;; Interface
+  ;;;
+  
+  
+  (method (setup-interface self)
+    (let ((width 800)
+          (height 500))
+      ;; Pipeline
+      (set! interface-pipeline (new Pipeline interface-sources interface-attributes interface-layouts))
+      
+      ;; Array
+      (let ((content (f32vector
+                       0.0 10.0 0.0 1.0   0.0 0.0 0.0 0.0
+                       10.0 10.0 0.0 1.0   1.0 0.0 0.0 0.0
+                       0.0  0.0 0.0 1.0   0.0 1.0 0.0 0.0
+                       10.0  0.0 0.0 1.0   1.0 1.0 0.0 0.0
+                       0.0  0.0 0.0 1.0   0.0 1.0 0.0 0.0
+                       10.0 10.0 0.0 1.0   1.0 0.0 0.0 0.0)))
+        (let ((buffer (new Buffer content)))
+          (set! interface-array (new Array texture-pipeline 1 6 buffer))))
+      
+      ;; Texture
+      (set! interface-texture (make-cairo-texture width height scale?: #t))
+      (fill-rect (get-surface interface-texture) (new Rect 100 100 (- width 100) (- height 100)) {Color Blue})
+      (set-font (get-surface interface-texture) {Font font-name: tahoma point-size: 22.5})
+      (draw-text (get-surface interface-texture) 110 110 (if (opengl?) "Hello OpenGL!" "Hello Metal!") {Color Yellow})
+      (map-texture interface-texture)
+      (setup-uniform interface-texture interface-pipeline "texture_sampler")
+      
+      ;; Uniform
+      (gaea-uniform-binding interface-pipeline interface-binding)
+      (let ((content (make-f32vector 16)))
+        (define (transfer! offset mat)
+          (f32vector-set! content (+ offset  0) (matrix-ref mat 0))
+          (f32vector-set! content (+ offset  1) (matrix-ref mat 1))
+          (f32vector-set! content (+ offset  2) (matrix-ref mat 2))
+          (f32vector-set! content (+ offset  3) (matrix-ref mat 3))
+          (f32vector-set! content (+ offset  4) (matrix-ref mat 4))
+          (f32vector-set! content (+ offset  5) (matrix-ref mat 5))
+          (f32vector-set! content (+ offset  6) (matrix-ref mat 6))
+          (f32vector-set! content (+ offset  7) (matrix-ref mat 7))
+          (f32vector-set! content (+ offset  8) (matrix-ref mat 8))
+          (f32vector-set! content (+ offset  9) (matrix-ref mat 9))
+          (f32vector-set! content (+ offset 10) (matrix-ref mat 10))
+          (f32vector-set! content (+ offset 11) (matrix-ref mat 11))
+          (f32vector-set! content (+ offset 12) (matrix-ref mat 12))
+          (f32vector-set! content (+ offset 13) (matrix-ref mat 13))
+          (f32vector-set! content (+ offset 14) (matrix-ref mat 14))
+          (f32vector-set! content (+ offset 15) (matrix-ref mat 15)))
+        
+        (transfer! 0 orthographic-matrix)
+        (set! interface-uniform (new Uniform-Buffer interface-binding content)))))
 
   
   ;;;
@@ -315,47 +444,34 @@
   
   
   (method override (resize-scene self width <fl> height <fl>)
-    ;; Projection
-    (let ((ratio (/ width height)))
-      (make-perspective-matrix! projection-matrix 53.13 ratio 1.0 30.0)
-      (opengl->metal-projection! projection-matrix))
-    
-    ;; View
-    (make-view-matrix! view-matrix (vertex 7. 2. 6.) (lookat (vertex -.513 -.110 -.852) (vertex -.056 .994 -.094) (vertex .857 -4.195e-8 -.516)))
-    
-    ;; Orthographic
-    (make-orthographic-matrix! orthographic-matrix 0.0 10.0 0.0 10.0 0.0 10.0)
-    (opengl->metal-projection! orthographic-matrix)
-    
-    ;; Textures
-    (when interface-texture
-      (close interface-texture))
-    (setup-textures self)
-    
-    ;; Uniforms
-    (set! uniform-buffer (let ((content (make-f32vector (* 3 16))))
-                           (define (transfer! offset mat)
-                             (f32vector-set! content (+ offset  0) (matrix-ref mat 0))
-                             (f32vector-set! content (+ offset  1) (matrix-ref mat 1))
-                             (f32vector-set! content (+ offset  2) (matrix-ref mat 2))
-                             (f32vector-set! content (+ offset  3) (matrix-ref mat 3))
-                             (f32vector-set! content (+ offset  4) (matrix-ref mat 4))
-                             (f32vector-set! content (+ offset  5) (matrix-ref mat 5))
-                             (f32vector-set! content (+ offset  6) (matrix-ref mat 6))
-                             (f32vector-set! content (+ offset  7) (matrix-ref mat 7))
-                             (f32vector-set! content (+ offset  8) (matrix-ref mat 8))
-                             (f32vector-set! content (+ offset  9) (matrix-ref mat 9))
-                             (f32vector-set! content (+ offset 10) (matrix-ref mat 10))
-                             (f32vector-set! content (+ offset 11) (matrix-ref mat 11))
-                             (f32vector-set! content (+ offset 12) (matrix-ref mat 12))
-                             (f32vector-set! content (+ offset 13) (matrix-ref mat 13))
-                             (f32vector-set! content (+ offset 14) (matrix-ref mat 14))
-                             (f32vector-set! content (+ offset 15) (matrix-ref mat 15)))
-                           
-                           (transfer!  0 projection-matrix)
-                           (transfer! 16 view-matrix)
-                           (transfer! 32 (make-identity-matrix))
-                           (metalNewBufferWithFloats content (f32vector-length content)))))
+    (nextmethod self width height)
+    (update-matrices self))
+  
+  
+  ;;;
+  ;;;; Render
+  ;;;
+  
+  
+  (method (start-render self)
+    (let ((thread
+            (new-thread
+              (lambda ()
+                (declare (proper-tail-calls))
+                (let ((period (/ 1. 30.)))
+                  (let (loop)
+                    (render-scene self)
+                    (sleep period)
+                    (loop))))
+              'render)))
+      (set! render-thread thread)
+      (thread-start! thread)))
+  
+  
+  (method (stop-render self)
+    (when render-thread
+      (thread-terminate! render-thread)
+      (set! render-thread #f)))
   
   
   ;;;
@@ -364,41 +480,18 @@
   
   
   (method override (draw-scene self)
-    ;; Texture
-    (when (not texture)
-      (set! texture (make-file-cairo-metal-texture {File Home "Media" "Oasis.png"})))
-    
-    ;; Render
-    (metalStartRender)
-    (let ((layer (get-window-layer self)))
-      (let ((drawable (metalLayerNextDrawable layer)))
-        (let ((buffer (metalMakeCommandBuffer))
-              (pass (metalMakeRenderPassDescriptor drawable)))
-          (let ((encoder (metalMakeRenderCommandEncoder buffer pass)))
-            ;; Interface
-            (when interface-texture
-              (metalEncoderSetRenderPipelineState encoder interface-pipeline)
-              (let ((tex (get-id interface-texture))
-                    (sampler (metalNewSamplerState)))
-                (metalEncoderSetVertexBuffer encoder interface-uniforms 1)
-                (metalEncoderSetVertexBuffer encoder interface-buffer 0)
-                (metalEncoderSetFragmentTexture encoder tex 0)
-                (metalEncoderSetFragmentSamplerState encoder sampler 0)
-                (metalEncoderDrawPrimitives encoder interface-vertices)))
-            ;; Texture
-            (metalEncoderSetRenderPipelineState encoder texture-pipeline)
-            (let ((tex (get-id texture))
-                  (sampler (metalNewSamplerState)))
-              (metalEncoderSetVertexBuffer encoder uniform-buffer 1)
-              (metalEncoderSetVertexBuffer encoder texture-buffer 0)
-              (metalEncoderSetFragmentTexture encoder tex 0)
-              (metalEncoderSetFragmentSamplerState encoder sampler 0)
-              (metalEncoderDrawPrimitives encoder texture-vertices))
-            (metalEndEncoding encoder))
-          (metalPresentDrawable drawable buffer)
-          (metalCommit buffer))))
-    (metalEndRender)))
-      
+    (with-render self
+      (lambda (encoder)
+        (gaea-bind-uniform encoder interface-uniform 0)
+        (with-pipeline interface-pipeline encoder
+          (lambda ()
+            (bind-texture interface-texture encoder)
+            (draw-array interface-array encoder)))
+        (gaea-bind-uniform encoder texture-uniform 0)
+        (with-pipeline texture-pipeline encoder
+          (lambda ()
+            (bind-texture texture-texture encoder)
+            (draw-array texture-array encoder)))))))
 
 
 ;;;
