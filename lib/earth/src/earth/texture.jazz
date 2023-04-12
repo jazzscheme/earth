@@ -75,13 +75,13 @@
     struct vs_in
     {
         float4 position      [[attribute(0)]];
-        float3 texture_coord [[attribute(1)]];
+        float2 texture_coord [[attribute(1)]];
     };
 
     struct vs_out
     {
         float4 position [[position]];
-        float3 texture_coord;
+        float2 texture_coord;
     };
 
     struct Uniforms
@@ -106,7 +106,8 @@
         texture2d<float, access::sample> tex [[texture(0)]],
         sampler samplr [[sampler(0)]])
     {
-        return tex.sample(samplr, float2(vert.texture_coord.x, vert.texture_coord.y));
+        return tex.sample(samplr, vert.texture_coord);
+        // return tex.sample(samplr, float2(vert.texture_coord.x, vert.texture_coord.y));
     }
 //#
       "vertex_simple"
@@ -153,12 +154,12 @@
 
 (definition texture-attributes
   (list
-    (list "position"      'float3 0 1)
-    (list "texture_coord" 'float3 (* 6 float-size) 1)))
+    (list "position"      'float4 0 1)
+    (list "texture_coord" 'float2 (* 4 float-size) 1)))
 
 (definition texture-layouts
   (list
-    (list 1 (* (if (opengl?) 10 16) float-size))))
+    (list 1 (* (if (opengl?) 10 8) float-size))))
 
 
 ;;;
