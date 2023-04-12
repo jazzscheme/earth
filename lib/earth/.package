@@ -60,6 +60,7 @@
                                  jazz.markup
                                  jazz.math
                                  jazz.menu
+                                 jazz.moment
                                  jazz.preferences
                                  jazz.print
                                  jazz.profile

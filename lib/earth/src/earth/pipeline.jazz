@@ -214,13 +214,15 @@
   
   (method (setup-pipelines self)
     (set! red-pipeline (new Pipeline pipeline-sources red-attributes red-layouts))
-    (let ((programid (get-program (get-program red-pipeline))))
-      (let ((matrices-index (glGetUniformBlockIndex programid "Matrices")))
-        (glUniformBlockBinding programid matrices-index uniform-matrices)))
+    (when (opengl?)
+      (let ((programid (get-program (get-program red-pipeline))))
+        (let ((matrices-index (glGetUniformBlockIndex programid "Matrices")))
+          (glUniformBlockBinding programid matrices-index uniform-matrices))))
     (set! blue-pipeline (new Pipeline pipeline-sources blue-attributes blue-layouts))
-    (let ((programid (get-program (get-program blue-pipeline))))
-      (let ((matrices-index (glGetUniformBlockIndex programid "Matrices")))
-        (glUniformBlockBinding programid matrices-index uniform-matrices))))
+    (when (opengl?)
+      (let ((programid (get-program (get-program blue-pipeline))))
+        (let ((matrices-index (glGetUniformBlockIndex programid "Matrices")))
+          (glUniformBlockBinding programid matrices-index uniform-matrices)))))
   
   
   (method (start-render self)
