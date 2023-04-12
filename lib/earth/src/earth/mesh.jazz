@@ -156,9 +156,7 @@
   
   
   (method override (resize-scene self width <fl> height <fl>)
-    ;; Viewport
-    (let ((scale-factor (main-screen-scale-factor)))
-      (glViewport 0 0 (* scale-factor (fxround width)) (* scale-factor (fxround height))))
+    (nextmethod self width height)
     
     ;; Projection
     (let ((ratio (/ width height)))
@@ -177,22 +175,20 @@
   
   
   (method override (draw-scene self)
-    ;; Background
-    (glClearColor 0.0 0.0 0.0 0.0)
-    (glClear (bitwise-ior GL_COLOR_BUFFER_BIT GL_DEPTH_BUFFER_BIT))
-    
-    ;; Mesh
-    (let ((surface (get-surface texture)))
-      (fill-rect surface {Rect 0 0 100 100} {Color Red})
-      (fill-rect surface {Rect 20 20 80 80} {Color Blue})
-      (flush surface)
-      (map-texture texture))
-    (use mesh-program)
-    (bind-material mesh-program (get-id texture))
-    (bind-uniforms mesh-program projection-matrix view-matrix)
-    (draw-array texture-mesh)
-    (unbind-uniforms mesh-program)
-    (unuse mesh-program)))
+    (with-render self
+      (lambda (encoder)
+        ;; Mesh
+        (let ((surface (get-surface texture)))
+          (fill-rect surface {Rect 0 0 100 100} {Color Red})
+          (fill-rect surface {Rect 20 20 80 80} {Color Blue})
+          (flush surface)
+          (map-texture texture))
+        (use mesh-program)
+        (bind-material mesh-program (get-id texture))
+        (bind-uniforms mesh-program projection-matrix view-matrix)
+        (draw-array texture-mesh)
+        (unbind-uniforms mesh-program)
+        (unuse mesh-program)))))
 
 
 ;;;

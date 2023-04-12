@@ -88,5 +88,6 @@
                                  earth.pipeline
                                  earth.mesh
                                  earth.texture
-                                 earth.model)))
+                                 earth.model
+                                 earth.interface)))
   (project ".project"))
