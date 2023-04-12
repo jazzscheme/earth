@@ -50,12 +50,10 @@
         (gaea.engine)
         (gaea.generate)
         (gaea.geometry)
-        (gaea.metal)
-        (gaea.opengl.glew)
         (gaea.pipeline)
-        (gaea.program)
         (gaea.render)
         (gaea.shader)
+        (gaea.uniform)
         (gaea.window))
 
 
@@ -186,7 +184,7 @@
   (slot blue-pipeline       initialize #f getter generate)
   
   ;; Uniforms
-  (slot uniform-matrices    initialize 0  getter generate)
+  (slot uniform-binding     initialize 0  getter generate)
   (slot uniform-buffer      initialize #f getter generate)
   
   ;; Arrays
@@ -213,16 +211,12 @@
   
   
   (method (setup-pipelines self)
+    ;; Red
     (set! red-pipeline (new Pipeline pipeline-sources red-attributes red-layouts))
-    (when (opengl?)
-      (let ((programid (get-program (get-program red-pipeline))))
-        (let ((matrices-index (glGetUniformBlockIndex programid "Matrices")))
-          (glUniformBlockBinding programid matrices-index uniform-matrices))))
+    (gaea-uniform-binding red-pipeline uniform-binding)
+    ;; Blue
     (set! blue-pipeline (new Pipeline pipeline-sources blue-attributes blue-layouts))
-    (when (opengl?)
-      (let ((programid (get-program (get-program blue-pipeline))))
-        (let ((matrices-index (glGetUniformBlockIndex programid "Matrices")))
-          (glUniformBlockBinding programid matrices-index uniform-matrices)))))
+    (gaea-uniform-binding blue-pipeline uniform-binding))
   
   
   (method (start-render self)
@@ -286,37 +280,31 @@
     ;; View
     (make-view-matrix! view-matrix (vertex 7. 2. 6.) (lookat (vertex -.513 -.110 -.852) (vertex -.056 .994 -.094) (vertex .857 -4.195e-8 -.516)))
     
-    ;; Uniforms
+    ;; Uniform
     (when (not uniform-buffer)
-      (set! uniform-buffer (let ((content (make-f32vector (* 3 16))))
-                           (define (transfer! offset mat)
-                             (f32vector-set! content (+ offset  0) (matrix-ref mat 0))
-                             (f32vector-set! content (+ offset  1) (matrix-ref mat 1))
-                             (f32vector-set! content (+ offset  2) (matrix-ref mat 2))
-                             (f32vector-set! content (+ offset  3) (matrix-ref mat 3))
-                             (f32vector-set! content (+ offset  4) (matrix-ref mat 4))
-                             (f32vector-set! content (+ offset  5) (matrix-ref mat 5))
-                             (f32vector-set! content (+ offset  6) (matrix-ref mat 6))
-                             (f32vector-set! content (+ offset  7) (matrix-ref mat 7))
-                             (f32vector-set! content (+ offset  8) (matrix-ref mat 8))
-                             (f32vector-set! content (+ offset  9) (matrix-ref mat 9))
-                             (f32vector-set! content (+ offset 10) (matrix-ref mat 10))
-                             (f32vector-set! content (+ offset 11) (matrix-ref mat 11))
-                             (f32vector-set! content (+ offset 12) (matrix-ref mat 12))
-                             (f32vector-set! content (+ offset 13) (matrix-ref mat 13))
-                             (f32vector-set! content (+ offset 14) (matrix-ref mat 14))
-                             (f32vector-set! content (+ offset 15) (matrix-ref mat 15)))
-                           
-                           (transfer!  0 projection-matrix)
-                           (transfer! 16 view-matrix)
-                           (transfer! 32 (make-identity-matrix))
-                           (if (metal?)
-                               (metalNewBufferWithFloats content (f32vector-length content))
-                             (let ((ubo (glGenBuffers*)))
-                               (glBindBuffer GL_UNIFORM_BUFFER ubo)
-                               (glBufferDataFloat* GL_UNIFORM_BUFFER (f32vector-length content) content GL_DYNAMIC_DRAW)
-                               (glBindBufferBase GL_UNIFORM_BUFFER uniform-matrices ubo)
-                               ubo))))))
+      (let ((content (make-f32vector (* 3 16))))
+        (define (transfer! offset mat)
+          (f32vector-set! content (+ offset  0) (matrix-ref mat 0))
+          (f32vector-set! content (+ offset  1) (matrix-ref mat 1))
+          (f32vector-set! content (+ offset  2) (matrix-ref mat 2))
+          (f32vector-set! content (+ offset  3) (matrix-ref mat 3))
+          (f32vector-set! content (+ offset  4) (matrix-ref mat 4))
+          (f32vector-set! content (+ offset  5) (matrix-ref mat 5))
+          (f32vector-set! content (+ offset  6) (matrix-ref mat 6))
+          (f32vector-set! content (+ offset  7) (matrix-ref mat 7))
+          (f32vector-set! content (+ offset  8) (matrix-ref mat 8))
+          (f32vector-set! content (+ offset  9) (matrix-ref mat 9))
+          (f32vector-set! content (+ offset 10) (matrix-ref mat 10))
+          (f32vector-set! content (+ offset 11) (matrix-ref mat 11))
+          (f32vector-set! content (+ offset 12) (matrix-ref mat 12))
+          (f32vector-set! content (+ offset 13) (matrix-ref mat 13))
+          (f32vector-set! content (+ offset 14) (matrix-ref mat 14))
+          (f32vector-set! content (+ offset 15) (matrix-ref mat 15)))
+        
+        (transfer!  0 projection-matrix)
+        (transfer! 16 view-matrix)
+        (transfer! 32 (make-identity-matrix))
+        (set! uniform-buffer (new Uniform-Buffer uniform-binding content)))))
   
   
   ;;;
@@ -327,8 +315,8 @@
   (method override (draw-scene self)
     (with-render self
       (lambda (encoder)
-        (when (and uniform-buffer (metal?))
-          (metalEncoderSetVertexBuffer encoder uniform-buffer 0))
+        (when uniform-buffer
+          (gaea-bind-uniform encoder uniform-buffer 0))
         (with-pipeline red-pipeline encoder
           (lambda ()
             (draw-array red-array encoder)))
