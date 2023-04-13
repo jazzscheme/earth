@@ -147,25 +147,19 @@
 //#))))
 
 
-(definition red-attributes
+(definition red-layout
   (list
-    (list "position" 'float4 0 1)
-    (list "color"    'float4 0 2)))
-
-(definition red-layouts
-  (list
-    (list 1 (* 4 float-size))
-    (list 2 (* 4 float-size))))
+    (list 1 (* 4 float-size)
+      (list "position" 'float4 0))
+    (list 2 (* 4 float-size)
+      (list "color"    'float4 0))))
 
 
-(definition blue-attributes
+(definition blue-layout
   (list
-    (list "position" 'float4 0 1)
-    (list "color"    'float4 (* 4 float-size) 1)))
-
-(definition blue-layouts
-  (list
-    (list 1 (* 8 float-size))))
+    (list 1 (* 8 float-size)
+      (list "position" 'float4 0)
+      (list "color"    'float4 (* 4 float-size)))))
 
 
 ;;;
@@ -221,10 +215,10 @@
   
   (method (setup-pipelines self)
     ;; Red
-    (set! red-pipeline (new Pipeline program red-attributes red-layouts))
+    (set! red-pipeline (new Pipeline program red-layout))
     (gaea-uniform-binding red-pipeline uniform-binding)
     ;; Blue
-    (set! blue-pipeline (new Pipeline program blue-attributes blue-layouts))
+    (set! blue-pipeline (new Pipeline program blue-layout))
     (gaea-uniform-binding blue-pipeline uniform-binding))
   
   

@@ -156,14 +156,11 @@
 //#))))
 
 
-(definition texture-attributes
+(definition texture-layout
   (list
-    (list "position"      'float4 0 1)
-    (list "texture_coord" 'float2 (* 4 float-size) 1)))
-
-(definition texture-layouts
-  (list
-    (list 1 (* 8 float-size))))
+    (list 1 (* 8 float-size)
+      (list "position"      'float4 0)
+      (list "texture_coord" 'float2 (* 4 float-size)))))
 
 
 ;;;
@@ -255,14 +252,11 @@
 //#))))
 
 
-(definition interface-attributes
+(definition interface-layout
   (list
-    (list "position"      'float4 0 1)
-    (list "texture_coord" 'float2 (* 4 float-size) 1)))
-
-(definition interface-layouts
-  (list
-    (list 1 (* 8 float-size))))
+    (list 1 (* 8 float-size)
+      (list "position"      'float4 0)
+      (list "texture_coord" 'float2 (* 4 float-size)))))
 
 
 ;;;
@@ -341,7 +335,7 @@
   
   (method (setup-texture self)
     ;; Pipeline
-    (set! texture-pipeline (new Pipeline (new Program texture-sources) texture-attributes texture-layouts))
+    (set! texture-pipeline (new Pipeline (new Program texture-sources) texture-layout))
     (gaea-uniform-binding texture-pipeline texture-binding)
     
     ;; Array
@@ -375,7 +369,7 @@
     (let ((width 800)
           (height 500))
       ;; Pipeline
-      (set! interface-pipeline (new Pipeline (new Program interface-sources) interface-attributes interface-layouts))
+      (set! interface-pipeline (new Pipeline (new Program interface-sources) interface-layout))
       (gaea-uniform-binding interface-pipeline interface-binding)
       
       ;; Array
