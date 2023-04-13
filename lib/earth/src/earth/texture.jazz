@@ -257,8 +257,8 @@
         (matrix-transfer! projection-matrix content 0)
         (matrix-transfer! view-matrix content 16)
         (matrix-transfer! (make-identity-matrix) content 32)
-        (set! uniform-buffer (new Uniform-Buffer "Matrices" uniform-binding content))
-        (gaea-uniform-binding texture-pipeline uniform-buffer))))
+        (set! uniform-buffer (new Uniform-Buffer "Matrices" 0 content))
+        (uniform-binding texture-pipeline uniform-buffer))))
   
   
   ;;;
