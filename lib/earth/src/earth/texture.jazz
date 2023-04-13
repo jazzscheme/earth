@@ -175,7 +175,6 @@
   (slot texture-pipeline    initialize #f getter generate)
   
   ;; Uniforms
-  (slot uniform-binding     initialize 0  getter generate)
   (slot uniform-buffer      initialize #f getter generate)
   
   ;; Arrays
@@ -207,8 +206,7 @@
   
   
   (method (setup-pipelines self)
-    (set! texture-pipeline (new Pipeline (new Program texture-sources) texture-layout))
-    (gaea-uniform-binding texture-pipeline "Matrices" uniform-binding))
+    (set! texture-pipeline (new Pipeline (new Program texture-sources) texture-layout)))
   
   
   ;;;
@@ -259,7 +257,8 @@
         (matrix-transfer! projection-matrix content 0)
         (matrix-transfer! view-matrix content 16)
         (matrix-transfer! (make-identity-matrix) content 32)
-        (set! uniform-buffer (new Uniform-Buffer uniform-binding content)))))
+        (set! uniform-buffer (new Uniform-Buffer "Matrices" uniform-binding content))
+        (gaea-uniform-binding texture-pipeline uniform-buffer))))
   
   
   ;;;
@@ -297,7 +296,7 @@
     (with-render self
       (lambda (encoder)
         (when uniform-buffer
-          (gaea-bind-uniform encoder uniform-buffer 0))
+          (bind-uniform encoder uniform-buffer 0))
         (with-pipeline texture-pipeline encoder
           (lambda ()
             (bind-texture texture encoder)

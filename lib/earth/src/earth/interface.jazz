@@ -275,14 +275,12 @@
   (slot texture-pipeline    initialize #f getter generate)
   (slot texture-array       initialize #f getter generate)
   (slot texture-texture     initialize #f getter generate)
-  (slot texture-binding     initialize 0  getter generate)
   (slot texture-uniform     initialize #f getter generate)
   
   ;; Interface
   (slot interface-pipeline  initialize #f getter generate)
   (slot interface-array     initialize #f getter generate)
   (slot interface-texture   initialize #f getter generate)
-  (slot interface-binding   initialize 1  getter generate)
   (slot interface-uniform   initialize #f getter generate)
 
   ;; Matrices
@@ -336,7 +334,6 @@
   (method (setup-texture self)
     ;; Pipeline
     (set! texture-pipeline (new Pipeline (new Program texture-sources) texture-layout))
-    (gaea-uniform-binding texture-pipeline "Matrices" texture-binding)
     
     ;; Array
     (let ((content
@@ -357,7 +354,8 @@
       (matrix-transfer! projection-matrix content 0)
       (matrix-transfer! view-matrix content 16)
       (matrix-transfer! (make-identity-matrix) content 32)
-      (set! texture-uniform (new Uniform-Buffer texture-binding content))))
+      (set! texture-uniform (new Uniform-Buffer "Matrices" 0 content))
+      (uniform-binding texture-pipeline texture-uniform)))
   
   
   ;;;
@@ -370,7 +368,6 @@
           (height 500))
       ;; Pipeline
       (set! interface-pipeline (new Pipeline (new Program interface-sources) interface-layout))
-      (gaea-uniform-binding interface-pipeline "Matrices" interface-binding)
       
       ;; Array
       (let ((content (f32vector
@@ -394,7 +391,8 @@
       ;; Uniform
       (let ((content (make-f32vector 16)))
         (matrix-transfer! orthographic-matrix content 0)
-        (set! interface-uniform (new Uniform-Buffer interface-binding content)))))
+        (set! interface-uniform (new Uniform-Buffer "Matrices" 1 content))
+        (uniform-binding interface-pipeline interface-uniform))))
 
   
   ;;;
@@ -441,12 +439,12 @@
   (method override (draw-scene self)
     (with-render self
       (lambda (encoder)
-        (gaea-bind-uniform encoder interface-uniform 0)
+        (bind-uniform encoder interface-uniform 0)
         (with-pipeline interface-pipeline encoder
           (lambda ()
             (bind-texture interface-texture encoder)
             (draw-array interface-array encoder)))
-        (gaea-bind-uniform encoder texture-uniform 0)
+        (bind-uniform encoder texture-uniform 0)
         (with-pipeline texture-pipeline encoder
           (lambda ()
             (bind-texture texture-texture encoder)

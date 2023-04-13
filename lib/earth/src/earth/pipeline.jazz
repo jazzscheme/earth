@@ -182,7 +182,6 @@
   (slot blue-pipeline       initialize #f getter generate)
   
   ;; Uniforms
-  (slot uniform-binding     initialize 0  getter generate)
   (slot uniform-buffer      initialize #f getter generate)
   
   ;; Arrays
@@ -214,12 +213,8 @@
   
   
   (method (setup-pipelines self)
-    ;; Red
     (set! red-pipeline (new Pipeline program red-layout))
-    (gaea-uniform-binding red-pipeline "Matrices" uniform-binding)
-    ;; Blue
-    (set! blue-pipeline (new Pipeline program blue-layout))
-    (gaea-uniform-binding blue-pipeline "Matrices" uniform-binding))
+    (set! blue-pipeline (new Pipeline program blue-layout)))
   
   
   (method (start-render self)
@@ -289,7 +284,9 @@
         (matrix-transfer! projection-matrix content 0)
         (matrix-transfer! view-matrix content 16)
         (matrix-transfer! (make-identity-matrix) content 32)
-        (set! uniform-buffer (new Uniform-Buffer uniform-binding content)))))
+        (set! uniform-buffer (new Uniform-Buffer "Matrices" 0 content))
+        (uniform-binding red-pipeline uniform-buffer)
+        (uniform-binding blue-pipeline uniform-buffer))))
   
   
   ;;;
@@ -301,7 +298,7 @@
     (with-render self
       (lambda (encoder)
         (when uniform-buffer
-          (gaea-bind-uniform encoder uniform-buffer 0))
+          (bind-uniform encoder uniform-buffer 0))
         (with-pipeline red-pipeline encoder
           (lambda ()
             (draw-array red-array encoder)))
