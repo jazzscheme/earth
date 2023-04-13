@@ -192,9 +192,6 @@
   (slot projection-matrix   initialize (make-matrix) getter generate)
   (slot view-matrix         initialize (make-matrix) getter generate)
   
-  ;; Render
-  (slot render-thread       initialize #f getter generate)
-  
   
   (method override (destroy self)
     (stop-render self)
@@ -215,27 +212,6 @@
   (method (setup-pipelines self)
     (set! red-pipeline (new Pipeline program red-layout))
     (set! blue-pipeline (new Pipeline program blue-layout)))
-  
-  
-  (method (start-render self)
-    (let ((thread
-            (new-thread
-              (lambda ()
-                (declare (proper-tail-calls))
-                (let ((period (/ 1. 30.)))
-                  (let (loop)
-                    (render-scene self)
-                    (sleep period)
-                    (loop))))
-              'render)))
-      (set! render-thread thread)
-      (thread-start! thread)))
-  
-  
-  (method (stop-render self)
-    (when render-thread
-      (thread-terminate! render-thread)
-      (set! render-thread #f)))
   
   
   ;;;

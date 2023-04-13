@@ -288,9 +288,6 @@
   (slot view-matrix         initialize (make-matrix) getter generate)
   (slot orthographic-matrix initialize (make-matrix) getter generate)
   
-  ;; Render
-  (slot render-thread       initialize #f getter generate)
-  
   
   (method override (destroy self)
     (stop-render self)
@@ -403,32 +400,6 @@
   (method override (resize-scene self width <fl> height <fl>)
     (nextmethod self width height)
     (update-matrices self))
-  
-  
-  ;;;
-  ;;;; Render
-  ;;;
-  
-  
-  (method (start-render self)
-    (let ((thread
-            (new-thread
-              (lambda ()
-                (declare (proper-tail-calls))
-                (let ((period (/ 1. 30.)))
-                  (let (loop)
-                    (render-scene self)
-                    (sleep period)
-                    (loop))))
-              'render)))
-      (set! render-thread thread)
-      (thread-start! thread)))
-  
-  
-  (method (stop-render self)
-    (when render-thread
-      (thread-terminate! render-thread)
-      (set! render-thread #f)))
   
   
   ;;;

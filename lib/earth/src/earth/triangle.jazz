@@ -103,6 +103,107 @@ void main()
 //#))
 
 
+(class Program extends Object
+  
+  
+  (slot vertex-shader   <object> getter generate)
+  (slot fragment-shader <object> getter generate)
+  (slot program         <object> getter generate)
+  
+  
+  (method override (initialize self)
+    (nextmethod self)
+    (set! vertex-shader (new Shader GL_VERTEX_SHADER))
+    (set! fragment-shader (new Shader GL_FRAGMENT_SHADER))
+    (set! program (glCreateProgram)))
+  
+  
+  (method package virtual (prepare self)
+    )
+  
+  
+  (method protected virtual (create-vertex-shader self)
+    )
+  
+  (method protected virtual (create-fragment-shader self)
+    )
+  
+  
+  (method public (set-vs self code)
+    (set-code vertex-shader code))
+  
+  (method public (set-fs self code)
+    (set-code fragment-shader code))
+  
+  
+  (method public (link self)
+    (create-shaders self)
+    (attach-shaders self))
+  
+  
+  (method public (relink self)
+    (detach-shaders self)
+    (set-vs self (create-vertex-shader self))
+    (set-fs self (create-fragment-shader self))
+    (prepare self))
+  
+  
+  (method public (create-shaders self)
+    (create-shader vertex-shader)
+    (create-shader fragment-shader)
+    (compile-shader vertex-shader)
+    (compile-shader fragment-shader))
+  
+  
+  (method public (attach-shaders self)
+    (when (and (get-shaderid vertex-shader)
+               (get-shaderid fragment-shader))
+      (glAttachShader program (get-shaderid vertex-shader))
+      (glAttachShader program (get-shaderid fragment-shader))
+      (glLinkProgram program)
+      (when (/= (glGetProgramiv* program GL_LINK_STATUS) GL_TRUE)
+        (let ((loglength (glGetProgramiv* program GL_INFO_LOG_LENGTH)))
+          (when (> loglength 0)
+            (error "{a}" (glGetProgramInfoLog* program loglength)))))))
+  
+  
+  (method public (detach-shaders self)
+    (when (and (get-shaderid vertex-shader)
+               (get-shaderid fragment-shader))
+      (glDetachShader program (get-shaderid vertex-shader))
+      (glDetachShader program (get-shaderid fragment-shader))
+      (set-shaderid vertex-shader #f)
+      (set-shaderid fragment-shader #f)))
+  
+  
+  (method protected virtual (enable-attributes self mesh)
+    )
+  
+  
+  (method public (create-array self mesh)
+    (let ((array (glGenVertexArrays*)))
+      (glBindVertexArray array)
+      (enable-attributes self mesh)
+      (glBindVertexArray 0)
+      array))
+  
+  
+  (method public (use self)
+    (glUseProgram program))
+  
+  
+  (method public (unuse self)
+    (glUseProgram 0))
+  
+  
+  (method public (get-uniform self name)
+    (glGetUniformLocation* program name))
+  
+  
+  (method public (get-attribute self name)
+    (glGetAttribLocation* program name)))
+
+
 (class Color-Program extends Program
   
   
@@ -115,8 +216,8 @@ void main()
     (set-vs self (create-vertex-shader self))
     (set-fs self (create-fragment-shader self))
     (link self)
-    (set! projection_matrix-uniform (add-uniform self "projection_matrix"))
-    (set! view_matrix-uniform (add-uniform self "view_matrix")))
+    (set! projection_matrix-uniform (get-uniform self "projection_matrix"))
+    (set! view_matrix-uniform (get-uniform self "view_matrix")))
   
   
   (method override (create-vertex-shader self)
@@ -227,9 +328,6 @@ void main()
   (slot projection-matrix   initialize (make-matrix) getter generate)
   (slot view-matrix         initialize (make-matrix) getter generate)
   
-  ;; Render
-  (slot render-thread       initialize #f getter generate)
-  
   
   (method override (destroy self)
     (stop-render self)
@@ -246,34 +344,14 @@ void main()
     (start-render self))
   
   
-  (method (start-render self)
-    (let ((thread
-            (new-thread
-              (lambda ()
-                (declare (proper-tail-calls))
-                (let ((period (/ 1. 30.)))
-                  (let (loop)
-                    (render-scene self)
-                    (sleep period)
-                    (loop))))
-              'render)))
-      (set! render-thread thread)
-      (thread-start! thread)))
-  
-  
-  (method (stop-render self)
-    (when render-thread
-      (thread-terminate! render-thread)
-      (set! render-thread #f)))
-  
-  
   ;;;
   ;;;; Programs
   ;;;
   
   
   (method (create-programs self)
-    (set! color-program (new Color-Program)))
+    (set! color-program (new Color-Program))
+    (prepare color-program))
   
   
   (method (release-programs self)
