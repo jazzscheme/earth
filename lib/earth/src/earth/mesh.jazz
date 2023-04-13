@@ -51,12 +51,14 @@
         (gaea.geometry)
         (gaea.mesh)
         (gaea.mesher)
+        (gaea.pipeline)
         (gaea.program)
         (gaea.program.mesh)
         (gaea.program.texture)
         (gaea.render)
         (gaea.shader)
         (gaea.texture)
+        (gaea.uniform)
         (gaea.window))
 
 
@@ -87,9 +89,6 @@
   ;; Matrices
   (slot projection-matrix   initialize (make-matrix) getter generate)
   (slot view-matrix         initialize (make-matrix) getter generate)
-  
-  ;; Render
-  (slot render-thread       initialize #f getter generate)
   
   
   (method override (destroy self)
@@ -124,14 +123,8 @@
             1.0 2.0 -5.0   1.0 0.0 0.0   0.0 1.0 0.0   0.0
             1.0 0.0 -5.0   1.0 0.0 0.0   1.0 1.0 0.0   0.0 ))
     
-    (define (create-mesh)
-      (let ((mesh (new Mesh)))
-        (allocate-vertices mesh)
-        (set-data (get-vertices-buffer mesh) content (f32vector-length content) vertex-floats)
-        (setup-array mesh mesh-program)
-        mesh))
-    
-    (set! texture-mesh (create-mesh)))
+    (let ((texture-vertices (new Buffer content)))
+      (set! texture-mesh (new Array @w Mesh mesh-pipeline 1 6 texture-vertices))))
   
   
   ;;;
@@ -143,7 +136,7 @@
     (set! texture (make-file-cairo-texture {File Home "Media" "Oasis.png"}))
     (flush (get-surface texture))
     (map-texture texture)
-    (setup-uniform texture texture-pipeline "texture_sampler"))
+    (setup-uniform texture mesh-pipeline "texture_sampler"))
   
   
   ;;;
@@ -168,33 +161,7 @@
         (matrix-transfer! view-matrix content 16)
         (matrix-transfer! (make-identity-matrix) content 32)
         (set! uniform-buffer (new Uniform-Buffer "Matrices" 0 content))
-        (uniform-binding texture-pipeline uniform-buffer))))
-  
-  
-  ;;;
-  ;;;; Render
-  ;;;
-  
-  
-  (method (start-render self)
-    (let ((thread
-            (new-thread
-              (lambda ()
-                (declare (proper-tail-calls))
-                (let ((period (/ 1. 30.)))
-                  (let (loop)
-                    (render-scene self)
-                    (sleep period)
-                    (loop))))
-              'render)))
-      (set! render-thread thread)
-      (thread-start! thread)))
-  
-  
-  (method (stop-render self)
-    (when render-thread
-      (thread-terminate! render-thread)
-      (set! render-thread #f)))
+        (uniform-binding mesh-pipeline uniform-buffer))))
   
   
   ;;;
@@ -205,12 +172,12 @@
   (method override (draw-scene self)
     (with-render self
       (lambda (encoder)
-        (use mesh-program)
-        (bind-material mesh-program (get-id texture))
-        (bind-uniforms mesh-program projection-matrix view-matrix)
-        (draw-array texture-mesh)
-        (unbind-uniforms mesh-program)
-        (unuse mesh-program)))))
+        (when uniform-buffer
+          (bind-uniform encoder uniform-buffer 0))
+        (with-pipeline mesh-pipeline encoder
+          (lambda ()
+            (bind-texture texture encoder)
+            (draw-array texture-mesh encoder)))))))
 
 
 ;;;

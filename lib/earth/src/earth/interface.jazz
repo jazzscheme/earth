@@ -78,14 +78,14 @@
 
     struct vs_in
     {
-        float4 position      [[attribute(0)]];
-        float3 texture_coord [[attribute(1)]];
+        float4 position [[attribute(0)]];
+        float3 texture  [[attribute(1)]];
     };
 
     struct vs_out
     {
         float4 position [[position]];
-        float3 texture_coord;
+        float3 texture;
     };
 
     struct Uniforms
@@ -101,7 +101,7 @@
     {
         vs_out vertexOut;
         vertexOut.position = uniforms->projectionMatrix * uniforms->viewMatrix * uniforms->modelMatrix * vertexIn.position;
-        vertexOut.texture_coord = vertexIn.texture_coord;
+        vertexOut.texture = vertexIn.texture;
         return vertexOut;
     }
     
@@ -110,8 +110,7 @@
         texture2d<float, access::sample> tex [[texture(0)]],
         sampler samplr [[sampler(0)]])
     {
-        // return tex.sample(samplr, vert.texture_coord);
-        return tex.sample(samplr, float2(vert.texture_coord.x, vert.texture_coord.y));
+        return tex.sample(samplr, float2(vert.texture.x, vert.texture.y));
     }
 //#
       "vertex_simple"
@@ -130,14 +129,14 @@
     };
 
     in vec4 position;
-    in vec3 texture_coord;
+    in vec3 texture;
 
     out vec3 final_texture;
 
     void main()
     {
         gl_Position = projection_matrix * view_matrix * model_matrix * position;
-        final_texture = texture_coord;
+        final_texture = texture;
     }
 //#)
       ;; fragment
@@ -159,8 +158,8 @@
 (definition texture-layout
   (list
     (list 1 (* 8 float-size)
-      (list "position"      'float4 0)
-      (list "texture_coord" 'float2 (* 4 float-size)))))
+      (list "position" 'float4 0)
+      (list "texture"  'float2 (* 4 float-size)))))
 
 
 ;;;
@@ -226,14 +225,14 @@
     };
 
     in vec4 position;
-    in vec3 texture_coord;
+    in vec3 texture;
 
     out vec3 final_texture;
 
     void main()
     {
         gl_Position = orthographic_matrix * position;
-        final_texture = texture_coord;
+        final_texture = texture;
     }
 //#)
       ;; fragment
@@ -255,8 +254,8 @@
 (definition interface-layout
   (list
     (list 1 (* 8 float-size)
-      (list "position"      'float4 0)
-      (list "texture_coord" 'float2 (* 4 float-size)))))
+      (list "position" 'float4 0)
+      (list "texture"  'float2 (* 4 float-size)))))
 
 
 ;;;
