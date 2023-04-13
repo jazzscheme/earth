@@ -341,6 +341,7 @@
   (method (setup-texture self)
     ;; Pipeline
     (set! texture-pipeline (new Pipeline texture-sources texture-attributes texture-layouts))
+    (gaea-uniform-binding texture-pipeline texture-binding)
     
     ;; Array
     (let ((content
@@ -357,7 +358,6 @@
     (setup-uniform texture-texture texture-pipeline "texture_sampler")
     
     ;; Uniform
-    (gaea-uniform-binding texture-pipeline texture-binding)
     (let ((content (make-f32vector (* 3 16))))
       (define (transfer! offset mat)
         (f32vector-set! content (+ offset  0) (matrix-ref mat 0))
@@ -393,6 +393,7 @@
           (height 500))
       ;; Pipeline
       (set! interface-pipeline (new Pipeline interface-sources interface-attributes interface-layouts))
+      (gaea-uniform-binding interface-pipeline interface-binding)
       
       ;; Array
       (let ((content (f32vector
@@ -403,7 +404,7 @@
                         0.0  0.0 0.0 1.0   0.0 1.0 0.0 0.0
                        10.0 10.0 0.0 1.0   1.0 0.0 0.0 0.0)))
         (let ((buffer (new Buffer content)))
-          (set! interface-array (new Array texture-pipeline 1 6 buffer))))
+          (set! interface-array (new Array interface-pipeline 1 6 buffer))))
       
       ;; Texture
       (set! interface-texture (make-cairo-texture width height scale?: #t))
@@ -414,7 +415,6 @@
       (setup-uniform interface-texture interface-pipeline "texture_sampler")
       
       ;; Uniform
-      (gaea-uniform-binding interface-pipeline interface-binding)
       (let ((content (make-f32vector 16)))
         (define (transfer! offset mat)
           (f32vector-set! content (+ offset  0) (matrix-ref mat 0))
