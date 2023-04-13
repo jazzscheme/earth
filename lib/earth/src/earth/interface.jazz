@@ -53,6 +53,7 @@
         (gaea.mesh)
         (gaea.mesher)
         (gaea.pipeline)
+        (gaea.program)
         (gaea.render)
         (gaea.shader)
         (gaea.texture)
@@ -340,7 +341,7 @@
   
   (method (setup-texture self)
     ;; Pipeline
-    (set! texture-pipeline (new Pipeline texture-sources texture-attributes texture-layouts))
+    (set! texture-pipeline (new Pipeline (new Program texture-sources) texture-attributes texture-layouts))
     (gaea-uniform-binding texture-pipeline texture-binding)
     
     ;; Array
@@ -374,7 +375,7 @@
     (let ((width 800)
           (height 500))
       ;; Pipeline
-      (set! interface-pipeline (new Pipeline interface-sources interface-attributes interface-layouts))
+      (set! interface-pipeline (new Pipeline (new Program interface-sources) interface-attributes interface-layouts))
       (gaea-uniform-binding interface-pipeline interface-binding)
       
       ;; Array

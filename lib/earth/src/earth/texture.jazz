@@ -51,6 +51,7 @@
         (gaea.generate)
         (gaea.geometry)
         (gaea.pipeline)
+        (gaea.program)
         (gaea.render)
         (gaea.shader)
         (gaea.texture)
@@ -209,7 +210,7 @@
   
   
   (method (setup-pipelines self)
-    (set! texture-pipeline (new Pipeline texture-sources texture-attributes texture-layouts))
+    (set! texture-pipeline (new Pipeline (new Program texture-sources) texture-attributes texture-layouts))
     (gaea-uniform-binding texture-pipeline uniform-binding))
   
   
