@@ -216,10 +216,10 @@
   (method (setup-pipelines self)
     ;; Red
     (set! red-pipeline (new Pipeline program red-layout))
-    (gaea-uniform-binding red-pipeline uniform-binding)
+    (gaea-uniform-binding red-pipeline "Matrices" uniform-binding)
     ;; Blue
     (set! blue-pipeline (new Pipeline program blue-layout))
-    (gaea-uniform-binding blue-pipeline uniform-binding))
+    (gaea-uniform-binding blue-pipeline "Matrices" uniform-binding))
   
   
   (method (start-render self)

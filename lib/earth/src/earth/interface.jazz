@@ -336,7 +336,7 @@
   (method (setup-texture self)
     ;; Pipeline
     (set! texture-pipeline (new Pipeline (new Program texture-sources) texture-layout))
-    (gaea-uniform-binding texture-pipeline texture-binding)
+    (gaea-uniform-binding texture-pipeline "Matrices" texture-binding)
     
     ;; Array
     (let ((content
@@ -370,7 +370,7 @@
           (height 500))
       ;; Pipeline
       (set! interface-pipeline (new Pipeline (new Program interface-sources) interface-layout))
-      (gaea-uniform-binding interface-pipeline interface-binding)
+      (gaea-uniform-binding interface-pipeline "Matrices" interface-binding)
       
       ;; Array
       (let ((content (f32vector

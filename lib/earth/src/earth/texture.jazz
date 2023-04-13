@@ -208,7 +208,7 @@
   
   (method (setup-pipelines self)
     (set! texture-pipeline (new Pipeline (new Program texture-sources) texture-layout))
-    (gaea-uniform-binding texture-pipeline uniform-binding))
+    (gaea-uniform-binding texture-pipeline "Matrices" uniform-binding))
   
   
   ;;;
