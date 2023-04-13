@@ -51,8 +51,6 @@
         (gaea.geometry)
         (gaea.mesh)
         (gaea.mesher)
-        (gaea.opengl)
-        (gaea.opengl.glew)
         (gaea.program)
         (gaea.program.mesh)
         (gaea.program.texture)
@@ -97,6 +95,8 @@
   
   
   (method override (setup-engine self)
+    (terminal (require-program 'texture))
+    (exit)
     (setup-programs self)
     (initialize-meshes self)
     (start-render self))
