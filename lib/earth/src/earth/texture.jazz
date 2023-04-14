@@ -149,7 +149,11 @@
     {
         fragColor = texture(texture_sampler, vec2(final_texture.x, final_texture.y));;
     }
-//#))))
+//#))
+    
+    ;; inputs
+    "position"
+    "texture"))
 
 
 (definition texture-layout

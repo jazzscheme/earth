@@ -144,7 +144,11 @@
     {
         fragColor = final_color;
     }
-//#))))
+//#))
+    
+    ;; inputs
+    "position"
+    "color"))
 
 
 (definition red-layout
