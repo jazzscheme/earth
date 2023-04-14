@@ -51,7 +51,6 @@
         (gaea.generate)
         (gaea.geometry)
         (gaea.mesh)
-        (gaea.mesher)
         (gaea.pipeline)
         (gaea.program)
         (gaea.render)

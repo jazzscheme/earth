@@ -59,6 +59,7 @@
         (gaea.shader)
         (gaea.texture)
         (gaea.uniform)
+        (gaea.uv)
         (gaea.window))
 
 
@@ -115,16 +116,26 @@
   
   
   (method (setup-meshes self)
-    (define content
-      #f32( 3.0 0.5 3.0   1.0 0.0 0.0   0.0 1.0 0.0   0.0
-            6.5 0.5 3.0   1.0 0.0 0.0   1.0 1.0 0.0   0.0
-            6.5 2.5 3.0   1.0 0.0 0.0   1.0 0.0 0.0   0.0
-            6.5 2.5 3.0   1.0 0.0 0.0   1.0 0.0 0.0   0.0
-            3.0 2.5 3.0   1.0 0.0 0.0   0.0 0.0 0.0   0.0
-            3.0 0.5 3.0   1.0 0.0 0.0   0.0 1.0 0.0   0.0 ))
-    
-    (let ((texture-vertices (new Buffer content)))
-      (set! texture-mesh (new Array @w Mesh mesh-pipeline 1 6 texture-vertices))))
+    (let ((mesher (new Mesher 0 1))
+          (v1 (vertex 3.0 2.5 3.0))
+          (v2 (vertex 3.0 0.5 3.0))
+          (v3 (vertex 6.5 0.5 3.0))
+          (v4 (vertex 6.5 2.5 3.0))
+          (normal (vertex 0. 0. 1.))
+          (tl uv/left)
+          (tt uv/top)
+          (tr uv/right)
+          (tb uv/bottom))
+      (let ((uv (uv 0. 0. 1. 1. 0.))
+            (depth 0.))
+        (add-quad mesher
+                  v1 normal tl tt 0
+                  v2 normal tl tb 0
+                  v3 normal tr tb 0
+                  v4 normal tr tt 0
+                  uv
+                  depth))
+      (set! texture-mesh (get-mesh mesher mesh-pipeline))))
   
   
   ;;;

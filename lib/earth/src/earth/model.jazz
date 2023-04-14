@@ -93,9 +93,6 @@
   (slot elevation           initialize 0. getter generate)
   (slot direction           initialize 1. getter generate)
   
-  ;; Render
-  (slot render-thread       initialize #f getter generate)
-  
   
   (method override (destroy self)
     (stop-render self)
@@ -110,27 +107,6 @@
   
   (method (setup-programs self)
     (set! mesh-program (require-program 'model)))
-  
-  
-  (method (start-render self)
-    (let ((thread
-            (new-thread
-              (lambda ()
-                (declare (proper-tail-calls))
-                (let ((period (/ 1. 30.)))
-                  (let (loop)
-                    (render-scene self)
-                    (sleep period)
-                    (loop))))
-              'render)))
-      (set! render-thread thread)
-      (thread-start! thread)))
-  
-  
-  (method (stop-render self)
-    (when render-thread
-      (thread-terminate! render-thread)
-      (set! render-thread #f)))
   
   
   ;;;
@@ -184,9 +160,7 @@
   
   
   (method override (resize-scene self width <fl> height <fl>)
-    ;; Viewport
-    (let ((scale-factor (main-screen-scale-factor)))
-      (glViewport 0 0 (* scale-factor (fxround width)) (* scale-factor (fxround height))))
+    (nextmethod self width height)
     
     ;; Projection
     (let ((ratio (/ width height)))
